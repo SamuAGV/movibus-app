@@ -1,5 +1,4 @@
 // app/(app)/student/index.tsx
-
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
@@ -10,8 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapView, { Marker, Polyline } from 'react-native-maps';
-import BusMarker, { BusSpriteRenderer } from './components/BusMarker';
+import MapView, { Marker, Polyline, UrlTile } from 'react-native-maps';
 import { useAuth } from '../../../src/contexts/AuthContext';
 import { MOCK_BUSES, MOCK_STOPS } from '../../../src/data/mockData';
 
@@ -36,9 +34,6 @@ export default function StudentScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Renderiza los sprites del autobús (solo Android) */}
-      <BusSpriteRenderer />
-
       <MapView
         ref={mapRef}
         style={StyleSheet.absoluteFillObject}
@@ -52,30 +47,39 @@ export default function StudentScreen() {
         showsMyLocationButton={false}
         showsCompass={true}
         showsTraffic={false}
+        mapType="none"
       >
-        {/* Marcadores de buses con SVG vectorial */}
+        <UrlTile
+  urlTemplate="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
+  maximumZ={19}
+  flipY={false}
+/>
+
         {MOCK_BUSES.filter(b => b.isActive).map(bus => (
-          <BusMarker
+          <Marker
             key={bus.id}
-            id={bus.id}
-            latitude={bus.latitude}
-            longitude={bus.longitude}
-            heading={45}
-            selected={selectedBusId === bus.id}
+            coordinate={{ latitude: bus.latitude, longitude: bus.longitude }}
             title={`Autobús ${bus.id}`}
             description={`Conductor: ${bus.driverName}`}
             onPress={() => setSelectedBusId(bus.id)}
-          />
+          >
+            <View
+              style={[
+                styles.busMarker,
+                selectedBusId === bus.id && styles.busMarkerSelected,
+              ]}
+            >
+              <Ionicons name="bus" size={20} color="white" />
+            </View>
+          </Marker>
         ))}
 
-        {/* Ruta */}
         <Polyline
           coordinates={MOCK_STOPS.map(s => ({ latitude: s.latitude, longitude: s.longitude }))}
           strokeWidth={4}
           strokeColor="#4d7c68"
         />
 
-        {/* Paradas */}
         {MOCK_STOPS.map((stop, index) => (
           <Marker
             key={stop.id}
@@ -89,7 +93,6 @@ export default function StudentScreen() {
           </Marker>
         ))}
 
-        {/* Mi ubicación */}
         <Marker
           coordinate={{ latitude: 19.434, longitude: -99.135 }}
           title="Mi ubicación"
@@ -100,7 +103,6 @@ export default function StudentScreen() {
         </Marker>
       </MapView>
 
-      {/* Header fijo verde */}
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>MoviBus</Text>
@@ -205,6 +207,17 @@ export default function StudentScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f7f6' },
+  busMarker: {
+    backgroundColor: '#4d7c68',
+    padding: 8,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  busMarkerSelected: {
+    backgroundColor: '#34C759',
+    transform: [{ scale: 1.2 }],
+  },
   stopMarker: {
     backgroundColor: '#4d7c68',
     width: 28,
