@@ -1,4 +1,7 @@
 // app/(app)/student/index.tsx
+// VERSIÓN B: Autobús SVG vectorial + mapa dinámico día/noche.
+// Claro de 6:00 a 17:59, oscuro de 18:00 a 5:59 (hora del dispositivo).
+// La interfaz NO usa temas personalizables (colores fijos).
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
@@ -9,14 +12,22 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapView, { Marker, Polyline, UrlTile } from 'react-native-maps';
+import MapView, { Marker, Polyline } from 'react-native-maps';
+import BusMarker, { BusSpriteRenderer } from './components/BusMarker';
 import { useAuth } from '../../../src/contexts/AuthContext';
 import { MOCK_BUSES, MOCK_STOPS } from '../../../src/data/mockData';
+import { useDayNightMap } from '../../../src/hooks/useDayNightMap';
 
 export default function StudentScreen() {
   const { user } = useAuth();
   const mapRef = useRef<MapView | null>(null);
   const [selectedBusId, setSelectedBusId] = useState(MOCK_BUSES[0].id);
+
+  // 🌗 Hook de día/noche
+  const { isNight, mapStyle, userInterfaceStyle } = useDayNightMap();
+
+  // Color de ruta/paradas según día o noche
+  const routeColor = isNight ? '#8ec3b9' : '#4d7c68';
 
   const selectedBus = MOCK_BUSES.find(b => b.id === selectedBusId) || MOCK_BUSES[0];
 
@@ -34,6 +45,9 @@ export default function StudentScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Renderiza los sprites del autobús (solo Android) */}
+      <BusSpriteRenderer />
+
       <MapView
         ref={mapRef}
         style={StyleSheet.absoluteFillObject}
@@ -43,43 +57,37 @@ export default function StudentScreen() {
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         }}
+        // 🌗 Estilo oscuro/claro automático
+        customMapStyle={mapStyle}
+        userInterfaceStyle={userInterfaceStyle}
         showsUserLocation={false}
         showsMyLocationButton={false}
         showsCompass={true}
         showsTraffic={false}
-        mapType="none"
       >
-        <UrlTile
-  urlTemplate="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
-  maximumZ={19}
-  flipY={false}
-/>
-
+        {/* Marcadores de buses con SVG vectorial */}
         {MOCK_BUSES.filter(b => b.isActive).map(bus => (
-          <Marker
+          <BusMarker
             key={bus.id}
-            coordinate={{ latitude: bus.latitude, longitude: bus.longitude }}
+            id={bus.id}
+            latitude={bus.latitude}
+            longitude={bus.longitude}
+            heading={45}
+            selected={selectedBusId === bus.id}
             title={`Autobús ${bus.id}`}
             description={`Conductor: ${bus.driverName}`}
             onPress={() => setSelectedBusId(bus.id)}
-          >
-            <View
-              style={[
-                styles.busMarker,
-                selectedBusId === bus.id && styles.busMarkerSelected,
-              ]}
-            >
-              <Ionicons name="bus" size={20} color="white" />
-            </View>
-          </Marker>
+          />
         ))}
 
+        {/* Ruta con color adaptado al día/noche */}
         <Polyline
           coordinates={MOCK_STOPS.map(s => ({ latitude: s.latitude, longitude: s.longitude }))}
           strokeWidth={4}
-          strokeColor="#4d7c68"
+          strokeColor={routeColor}
         />
 
+        {/* Paradas con color adaptado */}
         {MOCK_STOPS.map((stop, index) => (
           <Marker
             key={stop.id}
@@ -87,12 +95,13 @@ export default function StudentScreen() {
             title={stop.name}
             description={`Parada ${index + 1}`}
           >
-            <View style={styles.stopMarker}>
+            <View style={[styles.stopMarker, { backgroundColor: routeColor }]}>
               <Text style={styles.stopMarkerText}>{index + 1}</Text>
             </View>
           </Marker>
         ))}
 
+        {/* Mi ubicación */}
         <Marker
           coordinate={{ latitude: 19.434, longitude: -99.135 }}
           title="Mi ubicación"
@@ -103,6 +112,7 @@ export default function StudentScreen() {
         </Marker>
       </MapView>
 
+      {/* Header fijo verde */}
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>MoviBus</Text>
@@ -112,6 +122,10 @@ export default function StudentScreen() {
               {MOCK_BUSES.filter(b => b.isActive).length} buses activos
             </Text>
           </View>
+          {/* Indicador de modo día/noche (opcional, para debug) */}
+          <Text style={styles.modeIndicator}>
+            {isNight ? '🌙 Modo noche' : '☀️ Modo día'}
+          </Text>
         </View>
         <TouchableOpacity
           style={styles.profileBtn}
@@ -207,19 +221,7 @@ export default function StudentScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f7f6' },
-  busMarker: {
-    backgroundColor: '#4d7c68',
-    padding: 8,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: 'white',
-  },
-  busMarkerSelected: {
-    backgroundColor: '#34C759',
-    transform: [{ scale: 1.2 }],
-  },
   stopMarker: {
-    backgroundColor: '#4d7c68',
     width: 28,
     height: 28,
     borderRadius: 14,
@@ -264,6 +266,12 @@ const styles = StyleSheet.create({
   },
   headerDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#34C759' },
   headerBadgeText: { fontSize: 11, color: 'white', fontWeight: '600' },
+  modeIndicator: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 3,
+    fontStyle: 'italic',
+  },
   profileBtn: {
     width: 42,
     height: 42,
