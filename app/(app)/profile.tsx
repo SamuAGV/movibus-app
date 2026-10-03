@@ -10,10 +10,20 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import ThemePicker from '../../src/components/ThemePicker';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useTheme } from '../../src/contexts/ThemeContext';
+import { edgeColor } from '../../src/theme/themes';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
+  const { theme } = useTheme();
+
+  // El tema personalizado aplica a la experiencia del estudiante
+  const isStudent = user?.role !== 'driver';
+  const accent = isStudent ? theme.primary : '#4d7c68';
+  const onAccent = isStudent ? theme.onPrimary : '#FFFFFF';
+  const accentEdge = isStudent ? edgeColor(theme) : 'transparent';
 
   const handleLogout = () => {
     Alert.alert('Cerrar sesión', '¿Estás seguro?', [
@@ -105,10 +115,17 @@ export default function ProfileScreen() {
         </View>
       )}
 
+      {/* Personalización del color (solo estudiantes) */}
+      {isStudent && (
+        <View style={styles.section}>
+          <ThemePicker />
+        </View>
+      )}
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Seguridad</Text>
         <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="lock-closed-outline" size={20} color="#4d7c68" />
+          <Ionicons name="lock-closed-outline" size={20} color={accent} />
           <Text style={styles.menuText}>Cambiar contraseña</Text>
           <Ionicons name="chevron-forward" size={18} color="#ccc" />
         </TouchableOpacity>
@@ -145,7 +162,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   roleText: { fontSize: 13, fontWeight: '600' },
-  section: { marginTop: 20, paddingHorizontal: 16 },
+  section: { marginTop: 20, paddingHorizontal: 16, paddingVertical: 16, backgroundColor: 'white' },
   sectionTitle: {
     fontSize: 14,
     fontWeight: '700',
@@ -153,7 +170,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginLeft: 4,
   },
-  card: { backgroundColor: 'white', borderRadius: 14, padding: 16 },
+  card: { backgroundColor: '#f8f8f8', borderRadius: 14, padding: 16 },
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10 },
   label: { fontSize: 14, color: '#888' },
   value: { fontSize: 14, fontWeight: '600', color: '#333' },
@@ -161,7 +178,7 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: '#f8f8f8',
     padding: 16,
     borderRadius: 14,
     gap: 12,
