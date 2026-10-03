@@ -9,14 +9,22 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapView, { Marker, Polyline, UrlTile } from 'react-native-maps';
+import MapView, { Marker, Polyline } from 'react-native-maps';
+import BusMarker, { BusSpriteRenderer } from './components/BusMarker';
 import { useAuth } from '../../../src/contexts/AuthContext';
+import { useTheme } from '../../../src/contexts/ThemeContext';
 import { MOCK_BUSES, MOCK_STOPS } from '../../../src/data/mockData';
+import { useDayNightMap } from '../../../src/hooks/useDayNightMap';
+import { bestOnColor, hexToRgba, mapAccent } from '../../../src/theme/themes';
 
 export default function StudentScreen() {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const mapRef = useRef<MapView | null>(null);
   const [selectedBusId, setSelectedBusId] = useState(MOCK_BUSES[0].id);
+
+  const { isNight, mapStyle, userInterfaceStyle } = useDayNightMap();
+  const routeColor = mapAccent(theme, isNight);
 
   const selectedBus = MOCK_BUSES.find(b => b.id === selectedBusId) || MOCK_BUSES[0];
 
@@ -34,6 +42,7 @@ export default function StudentScreen() {
 
   return (
     <View style={styles.container}>
+      <BusSpriteRenderer />
       <MapView
         ref={mapRef}
         style={StyleSheet.absoluteFillObject}
@@ -43,41 +52,31 @@ export default function StudentScreen() {
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         }}
+        customMapStyle={mapStyle}
+        userInterfaceStyle={userInterfaceStyle}
         showsUserLocation={false}
         showsMyLocationButton={false}
         showsCompass={true}
         showsTraffic={false}
-        mapType="none"
       >
-        <UrlTile
-  urlTemplate="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
-  maximumZ={19}
-  flipY={false}
-/>
-
         {MOCK_BUSES.filter(b => b.isActive).map(bus => (
-          <Marker
+          <BusMarker
             key={bus.id}
-            coordinate={{ latitude: bus.latitude, longitude: bus.longitude }}
+            id={bus.id}
+            latitude={bus.latitude}
+            longitude={bus.longitude}
+            heading={45}
+            selected={selectedBusId === bus.id}
             title={`Autobús ${bus.id}`}
             description={`Conductor: ${bus.driverName}`}
             onPress={() => setSelectedBusId(bus.id)}
-          >
-            <View
-              style={[
-                styles.busMarker,
-                selectedBusId === bus.id && styles.busMarkerSelected,
-              ]}
-            >
-              <Ionicons name="bus" size={20} color="white" />
-            </View>
-          </Marker>
+          />
         ))}
 
         <Polyline
           coordinates={MOCK_STOPS.map(s => ({ latitude: s.latitude, longitude: s.longitude }))}
           strokeWidth={4}
-          strokeColor="#4d7c68"
+          strokeColor={routeColor}
         />
 
         {MOCK_STOPS.map((stop, index) => (
@@ -87,8 +86,10 @@ export default function StudentScreen() {
             title={stop.name}
             description={`Parada ${index + 1}`}
           >
-            <View style={styles.stopMarker}>
-              <Text style={styles.stopMarkerText}>{index + 1}</Text>
+            <View style={[styles.stopMarker, { backgroundColor: routeColor }]}>
+              <Text style={[styles.stopMarkerText, { color: bestOnColor(routeColor) }]}>
+                {index + 1}
+              </Text>
             </View>
           </Marker>
         ))}
@@ -103,12 +104,12 @@ export default function StudentScreen() {
         </Marker>
       </MapView>
 
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.primary, borderWidth: 1, borderColor: theme.edge }]}>
         <View>
-          <Text style={styles.headerTitle}>MoviBus</Text>
-          <View style={styles.headerBadge}>
+          <Text style={[styles.headerTitle, { color: theme.onPrimary }]}>MoviBus</Text>
+          <View style={[styles.headerBadge, { backgroundColor: hexToRgba(theme.onPrimary, 0.2) }]}>
             <View style={styles.headerDot} />
-            <Text style={styles.headerBadgeText}>
+            <Text style={[styles.headerBadgeText, { color: theme.onPrimary }]}>
               {MOCK_BUSES.filter(b => b.isActive).length} buses activos
             </Text>
           </View>
@@ -117,15 +118,17 @@ export default function StudentScreen() {
           style={styles.profileBtn}
           onPress={() => router.push('/(app)/profile')}
         >
-          <Text style={styles.profileInitial}>
-            {user?.name?.charAt(0).toUpperCase() || 'U'}
-          </Text>
+          <View style={[styles.profileInitialWrap, { backgroundColor: hexToRgba(theme.onPrimary, 0.2) }]}>
+            <Text style={[styles.profileInitial, { color: theme.onPrimary }]}>
+              {user?.name?.charAt(0).toUpperCase() || 'U'}
+            </Text>
+          </View>
         </TouchableOpacity>
       </View>
 
       <View style={styles.mapControls}>
         <TouchableOpacity style={styles.mapBtn} onPress={centerOnRoute}>
-          <Ionicons name="locate" size={22} color="#4d7c68" />
+          <Ionicons name="locate" size={22} color={theme.primary} />
         </TouchableOpacity>
       </View>
 
@@ -138,8 +141,8 @@ export default function StudentScreen() {
         >
           <View style={styles.selectedCard}>
             <View style={styles.selectedHeader}>
-              <View style={styles.busIcon}>
-                <Ionicons name="bus" size={22} color="white" />
+              <View style={[styles.busIcon, { backgroundColor: theme.primary, borderWidth: 1, borderColor: theme.edge }]}>
+                <Ionicons name="bus" size={22} color={theme.onPrimary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.busIdText}>Autobús {selectedBus.id}</Text>
@@ -148,7 +151,7 @@ export default function StudentScreen() {
                 </Text>
               </View>
               <View style={styles.speedBadge}>
-                <Text style={styles.speedBadgeValue}>{selectedBus.speed}</Text>
+                <Text style={[styles.speedBadgeValue, { color: theme.primary }]}>{selectedBus.speed}</Text>
                 <Text style={styles.speedBadgeLabel}>km/h</Text>
               </View>
             </View>
@@ -167,13 +170,13 @@ export default function StudentScreen() {
                   <View
                     style={[
                       styles.busItemIcon,
-                      isSelected && styles.busItemIconSelected,
+                      isSelected && { backgroundColor: theme.primary, borderWidth: 1, borderColor: theme.edge },
                     ]}
                   >
                     <Ionicons
                       name="bus"
                       size={18}
-                      color={isSelected ? 'white' : '#4d7c68'}
+                      color={isSelected ? theme.onPrimary : theme.primary}
                     />
                   </View>
                   <View style={{ flex: 1 }}>
@@ -195,9 +198,9 @@ export default function StudentScreen() {
             })}
           </View>
 
-          <TouchableOpacity style={styles.takeBusBtn}>
-            <Ionicons name="log-in" size={20} color="white" />
-            <Text style={styles.takeBusText}>Voy a tomar este autobús</Text>
+          <TouchableOpacity style={[styles.takeBusBtn, { backgroundColor: theme.primary, borderWidth: 1, borderColor: theme.edge }]}>
+            <Ionicons name="log-in" size={20} color={theme.onPrimary} />
+            <Text style={[styles.takeBusText, { color: theme.onPrimary }]}>Voy a tomar este autobús</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -207,19 +210,7 @@ export default function StudentScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f7f6' },
-  busMarker: {
-    backgroundColor: '#4d7c68',
-    padding: 8,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: 'white',
-  },
-  busMarkerSelected: {
-    backgroundColor: '#34C759',
-    transform: [{ scale: 1.2 }],
-  },
   stopMarker: {
-    backgroundColor: '#4d7c68',
     width: 28,
     height: 28,
     borderRadius: 14,
@@ -228,7 +219,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'white',
   },
-  stopMarkerText: { color: 'white', fontWeight: 'bold', fontSize: 12 },
+  stopMarkerText: { fontWeight: 'bold', fontSize: 12 },
   userMarker: {
     backgroundColor: '#007AFF',
     padding: 8,
@@ -244,17 +235,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#4d7c68',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 16,
     elevation: 5,
   },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: 'white' },
+  headerTitle: { fontSize: 20, fontWeight: 'bold' },
   headerBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
     paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 12,
@@ -263,16 +252,16 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   headerDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#34C759' },
-  headerBadgeText: { fontSize: 11, color: 'white', fontWeight: '600' },
-  profileBtn: {
+  headerBadgeText: { fontSize: 11, fontWeight: '600' },
+  profileBtn: { padding: 4 },
+  profileInitialWrap: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  profileInitial: { fontSize: 16, fontWeight: 'bold', color: 'white' },
+  profileInitial: { fontSize: 16, fontWeight: 'bold' },
   mapControls: { position: 'absolute', right: 16, bottom: 400, gap: 10 },
   mapBtn: {
     width: 46,
@@ -316,7 +305,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#4d7c68',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -324,7 +312,7 @@ const styles = StyleSheet.create({
   busIdText: { fontSize: 15, fontWeight: '600', color: '#333' },
   busDriverText: { fontSize: 12, color: '#666', marginTop: 2 },
   speedBadge: { alignItems: 'center' },
-  speedBadgeValue: { fontSize: 20, fontWeight: 'bold', color: '#4d7c68' },
+  speedBadgeValue: { fontSize: 20, fontWeight: 'bold' },
   speedBadgeLabel: { fontSize: 10, color: '#999' },
   listCard: {
     backgroundColor: '#f8faf9',
@@ -357,7 +345,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
   },
-  busItemIconSelected: { backgroundColor: '#4d7c68' },
   busItemId: { fontSize: 13, fontWeight: '600', color: '#333' },
   busItemDriver: { fontSize: 11, color: '#888', marginTop: 2 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
@@ -365,7 +352,6 @@ const styles = StyleSheet.create({
   statusInactive: { backgroundColor: '#ffebee' },
   statusBadgeText: { fontSize: 11, fontWeight: '600', color: '#555' },
   takeBusBtn: {
-    backgroundColor: '#4d7c68',
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
@@ -373,5 +359,5 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
   },
-  takeBusText: { color: 'white', fontSize: 15, fontWeight: '600' },
+  takeBusText: { fontSize: 15, fontWeight: '600' },
 });
