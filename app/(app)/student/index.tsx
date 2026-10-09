@@ -1,7 +1,7 @@
 // app/(app)/student/index.tsx
-// VERSIÓN B: Autobús SVG vectorial + mapa dinámico día/noche.
-// Claro de 6:00 a 17:59, oscuro de 18:00 a 5:59 (hora del dispositivo).
-// La interfaz NO usa temas personalizables (colores fijos).
+// VERSIÓN C: Autobús SVG + mapa día/noche + temas personalizables.
+// El color del header, botones y elementos del mapa se adaptan al tema elegido
+// por el estudiante (en Perfil → Personalización).
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
@@ -18,7 +18,7 @@ import { useAuth } from '../../../src/contexts/AuthContext';
 import { useTheme } from '../../../src/contexts/ThemeContext';
 import { MOCK_BUSES, MOCK_STOPS } from '../../../src/data/mockData';
 import { useDayNightMap } from '../../../src/hooks/useDayNightMap';
-
+import { bestOnColor, hexToRgba, mapAccent } from '../../../src/theme/themes';
 
 export default function StudentScreen() {
   const { user } = useAuth();
@@ -26,7 +26,11 @@ export default function StudentScreen() {
   const mapRef = useRef<MapView | null>(null);
   const [selectedBusId, setSelectedBusId] = useState(MOCK_BUSES[0].id);
 
+  // 🌗 Hook de día/noche
+  const { isNight, mapStyle, userInterfaceStyle } = useDayNightMap();
 
+  // 🎨 Color adaptado al tema Y al modo día/noche (para ruta y paradas)
+  const routeColor = mapAccent(theme, isNight);
 
   const selectedBus = MOCK_BUSES.find(b => b.id === selectedBusId) || MOCK_BUSES[0];
 
@@ -44,6 +48,8 @@ export default function StudentScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Renderiza los sprites del autobús (solo Android) */}
+      <BusSpriteRenderer />
 
       <MapView
         ref={mapRef}
@@ -54,7 +60,7 @@ export default function StudentScreen() {
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         }}
-
+        // 🌗 Estilo oscuro/claro automático
         customMapStyle={mapStyle}
         userInterfaceStyle={userInterfaceStyle}
         showsUserLocation={false}
@@ -62,7 +68,7 @@ export default function StudentScreen() {
         showsCompass={true}
         showsTraffic={false}
       >
-
+        {/* Marcadores de buses con SVG vectorial */}
         {MOCK_BUSES.filter(b => b.isActive).map(bus => (
           <BusMarker
             key={bus.id}
@@ -77,14 +83,14 @@ export default function StudentScreen() {
           />
         ))}
 
-        {/* Ruta con color adaptado al día/noche */}
+        {/* Ruta con color del tema adaptado al mapa */}
         <Polyline
           coordinates={MOCK_STOPS.map(s => ({ latitude: s.latitude, longitude: s.longitude }))}
           strokeWidth={4}
           strokeColor={routeColor}
         />
 
-        {/* Paradas con color adaptado */}
+        {/* Paradas con color del tema */}
         {MOCK_STOPS.map((stop, index) => (
           <Marker
             key={stop.id}
@@ -93,7 +99,9 @@ export default function StudentScreen() {
             description={`Parada ${index + 1}`}
           >
             <View style={[styles.stopMarker, { backgroundColor: routeColor }]}>
-
+              <Text style={[styles.stopMarkerText, { color: bestOnColor(routeColor) }]}>
+                {index + 1}
+              </Text>
             </View>
           </Marker>
         ))}
@@ -109,17 +117,31 @@ export default function StudentScreen() {
         </Marker>
       </MapView>
 
-
+      {/* 🎨 Header con color del tema */}
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: theme.primary,
+            borderWidth: 1,
+            borderColor: theme.edge,
+          },
+        ]}
+      >
         <View>
           <Text style={[styles.headerTitle, { color: theme.onPrimary }]}>MoviBus</Text>
-          <View style={[styles.headerBadge, { backgroundColor: hexToRgba(theme.onPrimary, 0.2) }]}>
+          <View
+            style={[
+              styles.headerBadge,
+              { backgroundColor: hexToRgba(theme.onPrimary, 0.2) },
+            ]}
+          >
             <View style={styles.headerDot} />
             <Text style={[styles.headerBadgeText, { color: theme.onPrimary }]}>
               {MOCK_BUSES.filter(b => b.isActive).length} buses activos
             </Text>
           </View>
-          {/* Indicador de modo día/noche (opcional, para debug) */}
-          <Text style={styles.modeIndicator}>
+          <Text style={[styles.modeIndicator, { color: hexToRgba(theme.onPrimary, 0.7) }]}>
             {isNight ? '🌙 Modo noche' : '☀️ Modo día'}
           </Text>
         </View>
@@ -127,7 +149,12 @@ export default function StudentScreen() {
           style={styles.profileBtn}
           onPress={() => router.push('/(app)/profile')}
         >
-          <View style={[styles.profileInitialWrap, { backgroundColor: hexToRgba(theme.onPrimary, 0.2) }]}>
+          <View
+            style={[
+              styles.profileInitialWrap,
+              { backgroundColor: hexToRgba(theme.onPrimary, 0.2) },
+            ]}
+          >
             <Text style={[styles.profileInitial, { color: theme.onPrimary }]}>
               {user?.name?.charAt(0).toUpperCase() || 'U'}
             </Text>
@@ -150,7 +177,17 @@ export default function StudentScreen() {
         >
           <View style={styles.selectedCard}>
             <View style={styles.selectedHeader}>
-              <View style={[styles.busIcon, { backgroundColor: theme.primary, borderWidth: 1, borderColor: theme.edge }]}>
+              {/* 🎨 Icono del bus con color del tema */}
+              <View
+                style={[
+                  styles.busIcon,
+                  {
+                    backgroundColor: theme.primary,
+                    borderWidth: 1,
+                    borderColor: theme.edge,
+                  },
+                ]}
+              >
                 <Ionicons name="bus" size={22} color={theme.onPrimary} />
               </View>
               <View style={{ flex: 1 }}>
@@ -160,7 +197,9 @@ export default function StudentScreen() {
                 </Text>
               </View>
               <View style={styles.speedBadge}>
-                <Text style={[styles.speedBadgeValue, { color: theme.primary }]}>{selectedBus.speed}</Text>
+                <Text style={[styles.speedBadgeValue, { color: theme.primary }]}>
+                  {selectedBus.speed}
+                </Text>
                 <Text style={styles.speedBadgeLabel}>km/h</Text>
               </View>
             </View>
@@ -179,7 +218,11 @@ export default function StudentScreen() {
                   <View
                     style={[
                       styles.busItemIcon,
-                      isSelected && { backgroundColor: theme.primary, borderWidth: 1, borderColor: theme.edge },
+                      isSelected && {
+                        backgroundColor: theme.primary,
+                        borderWidth: 1,
+                        borderColor: theme.edge,
+                      },
                     ]}
                   >
                     <Ionicons
@@ -207,9 +250,21 @@ export default function StudentScreen() {
             })}
           </View>
 
-          <TouchableOpacity style={[styles.takeBusBtn, { backgroundColor: theme.primary, borderWidth: 1, borderColor: theme.edge }]}>
+          {/* 🎨 Botón con color del tema */}
+          <TouchableOpacity
+            style={[
+              styles.takeBusBtn,
+              {
+                backgroundColor: theme.primary,
+                borderWidth: 1,
+                borderColor: theme.edge,
+              },
+            ]}
+          >
             <Ionicons name="log-in" size={20} color={theme.onPrimary} />
-            <Text style={[styles.takeBusText, { color: theme.onPrimary }]}>Voy a tomar este autobús</Text>
+            <Text style={[styles.takeBusText, { color: theme.onPrimary }]}>
+              Voy a tomar este autobús
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -261,7 +316,10 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   headerDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#34C759' },
-
+  headerBadgeText: { fontSize: 11, fontWeight: '600' },
+  modeIndicator: { fontSize: 10, marginTop: 3, fontStyle: 'italic' },
+  profileBtn: { padding: 4 },
+  profileInitialWrap: {
     width: 42,
     height: 42,
     borderRadius: 21,
