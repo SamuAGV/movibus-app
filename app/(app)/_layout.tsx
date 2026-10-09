@@ -3,8 +3,20 @@ import { router, Stack, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { AvatarProvider } from '../../src/contexts/AvatarContext';
+import { ThemeProvider } from '../../src/contexts/ThemeContext';
 
 export default function AppLayout() {
+  return (
+    <ThemeProvider>
+      <AvatarProvider>
+        <AppLayoutContent />
+      </AvatarProvider>
+    </ThemeProvider>
+  );
+}
+
+function AppLayoutContent() {
   const { user, loading } = useAuth();
   const segments = useSegments();
 
@@ -23,7 +35,14 @@ export default function AppLayout() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#e9f0ec' }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: '#e9f0ec',
+        }}
+      >
         <ActivityIndicator size="large" color="#4d7c68" />
         <Text style={{ marginTop: 16, color: '#4d7c68', fontSize: 16 }}>Cargando...</Text>
       </View>
