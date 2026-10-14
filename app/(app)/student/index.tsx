@@ -1,48 +1,55 @@
 // app/(app)/student/index.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import MapView from 'react-native-maps';
 import BusMarker, { BusSpriteRenderer } from './components/BusMarker';
+import { useAppearance } from '../../../src/contexts/AppearanceContext';
 import { useAuth } from '../../../src/contexts/AuthContext';
+import { useAvatar } from '../../../src/contexts/AvatarContext';
 import { useTheme } from '../../../src/contexts/ThemeContext';
-import { useStudentLocations } from '../../../src/hooks/useStudentLocations';
 import { useDayNightMap } from '../../../src/hooks/useDayNightMap';
-import { bestOnColor, hexToRgba, mapAccent } from '../../../src/theme/themes';
+import { useStudentLocations } from '../../../src/hooks/useStudentLocations';
+import { AppearanceColors } from '../../../src/theme/appearance';
+import { hexToRgba } from '../../../src/theme/themes';
 
 export default function StudentScreen() {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const { colors } = useAppearance();
+  const { avatar } = useAvatar();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const mapRef = useRef<MapView | null>(null);
   const { buses: busesMap, loading, error } = useStudentLocations();
   const [selectedBusId, setSelectedBusId] = useState<string | null>(null);
 
   const { isNight, mapStyle, userInterfaceStyle } = useDayNightMap();
-  const routeColor = mapAccent(theme, isNight);
 
-  // 🎯 Solo los buses reales de la API
   const buses = Object.values(busesMap);
 
-  // 🎯 Auto-seleccionar el primer bus disponible
+  const goToProfile = useCallback(() => {
+    router.push('/(app)/profile');
+  }, []);
+
   useEffect(() => {
     if (!selectedBusId && buses.length > 0) {
       setSelectedBusId(buses[0].busId);
     }
-    // Si el bus seleccionado desaparece (ya no está activo), resetear
     if (selectedBusId && !busesMap[selectedBusId]) {
       setSelectedBusId(buses.length > 0 ? buses[0].busId : null);
     }
   }, [buses, busesMap, selectedBusId]);
 
-  // 🎯 Centrar el mapa en el primer bus cuando llegue (una sola vez)
   const hasCenteredRef = useRef(false);
   useEffect(() => {
     if (hasCenteredRef.current) return;
@@ -50,8 +57,6 @@ export default function StudentScreen() {
     if (!mapRef.current) return;
 
     const firstBus = buses[0];
-    console.log('🎯 Centrando mapa en:', firstBus.latitude, firstBus.longitude);
-
     mapRef.current.animateToRegion(
       {
         latitude: firstBus.latitude,
@@ -67,7 +72,6 @@ export default function StudentScreen() {
 
   const selectedBus = selectedBusId ? busesMap[selectedBusId] : null;
 
-  // 🎯 Botón "mi ubicación" → centra en el bus seleccionado
   const centerOnRoute = () => {
     const target = selectedBus || buses[0];
     if (!target || !mapRef.current) return;
@@ -83,7 +87,35 @@ export default function StudentScreen() {
     );
   };
 
-  // Loading inicial
+  // Sub-componente reutilizable: círculo de avatar del header
+  const ProfileAvatar = () => (
+    <View
+      style={[
+        styles.profileInitialWrap,
+        {
+          backgroundColor: avatar
+            ? 'transparent'
+            : hexToRgba(theme.onPrimary, 0.2),
+          borderWidth: avatar ? 1 : 0,
+          borderColor: hexToRgba(theme.onPrimary, 0.4),
+          overflow: 'hidden',
+        },
+      ]}
+    >
+      {avatar ? (
+        <Image
+          source={avatar.source}
+          style={{ width: 42, height: 42 }}
+          resizeMode="cover"
+        />
+      ) : (
+        <Text style={[styles.profileInitial, { color: theme.onPrimary }]}>
+          {user?.name?.charAt(0).toUpperCase() || 'U'}
+        </Text>
+      )}
+    </View>
+  );
+
   if (loading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: theme.primary }]}>
@@ -95,7 +127,6 @@ export default function StudentScreen() {
     );
   }
 
-  // Sin buses activos
   if (buses.length === 0) {
     return (
       <View style={styles.container}>
@@ -110,7 +141,9 @@ export default function StudentScreen() {
           ]}
         >
           <View>
-            <Text style={[styles.headerTitle, { color: theme.onPrimary }]}>MoviBus</Text>
+            <Text style={[styles.headerTitle, { color: theme.onPrimary }]}>
+              MoviBus
+            </Text>
             <View
               style={[
                 styles.headerBadge,
@@ -123,25 +156,21 @@ export default function StudentScreen() {
               </Text>
             </View>
           </View>
+
           <TouchableOpacity
             style={styles.profileBtn}
-            onPress={() => router.push('/(app)/profile')}
+            onPress={goToProfile}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Abrir perfil"
           >
-            <View
-              style={[
-                styles.profileInitialWrap,
-                { backgroundColor: hexToRgba(theme.onPrimary, 0.2) },
-              ]}
-            >
-              <Text style={[styles.profileInitial, { color: theme.onPrimary }]}>
-                {user?.name?.charAt(0).toUpperCase() || 'U'}
-              </Text>
-            </View>
+            <ProfileAvatar />
           </TouchableOpacity>
         </View>
 
         <View style={styles.emptyState}>
-          <Ionicons name="bus-outline" size={80} color="#ccc" />
+          <Ionicons name="bus-outline" size={80} color={colors.textSecondary} />
           <Text style={styles.emptyTitle}>No hay autobuses activos</Text>
           <Text style={styles.emptySubtitle}>
             {error
@@ -154,7 +183,7 @@ export default function StudentScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} pointerEvents="box-none">
       <BusSpriteRenderer />
 
       <MapView
@@ -164,10 +193,9 @@ export default function StudentScreen() {
         userInterfaceStyle={userInterfaceStyle}
         showsUserLocation={false}
         showsMyLocationButton={false}
-        showsCompass={true}
+        showsCompass={false}
         showsTraffic={false}
       >
-        {/* Marcadores de buses reales */}
         {buses.map((bus) => (
           <BusMarker
             key={bus.busId}
@@ -183,7 +211,7 @@ export default function StudentScreen() {
         ))}
       </MapView>
 
-      {/* Header */}
+      {/* Header flotante */}
       <View
         style={[
           styles.header,
@@ -193,9 +221,12 @@ export default function StudentScreen() {
             borderColor: theme.edge,
           },
         ]}
+        pointerEvents="box-none"
       >
-        <View>
-          <Text style={[styles.headerTitle, { color: theme.onPrimary }]}>MoviBus</Text>
+        <View pointerEvents="none">
+          <Text style={[styles.headerTitle, { color: theme.onPrimary }]}>
+            MoviBus
+          </Text>
           <View
             style={[
               styles.headerBadge,
@@ -207,29 +238,34 @@ export default function StudentScreen() {
               {buses.length} {buses.length === 1 ? 'bus activo' : 'buses activos'}
             </Text>
           </View>
-          <Text style={[styles.modeIndicator, { color: hexToRgba(theme.onPrimary, 0.7) }]}>
+          <Text
+            style={[
+              styles.modeIndicator,
+              { color: hexToRgba(theme.onPrimary, 0.7) },
+            ]}
+          >
             {isNight ? '🌙 Modo noche' : '☀️ Modo día'}
           </Text>
         </View>
+
         <TouchableOpacity
           style={styles.profileBtn}
-          onPress={() => router.push('/(app)/profile')}
+          onPress={goToProfile}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Abrir perfil"
         >
-          <View
-            style={[
-              styles.profileInitialWrap,
-              { backgroundColor: hexToRgba(theme.onPrimary, 0.2) },
-            ]}
-          >
-            <Text style={[styles.profileInitial, { color: theme.onPrimary }]}>
-              {user?.name?.charAt(0).toUpperCase() || 'U'}
-            </Text>
-          </View>
+          <ProfileAvatar />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.mapControls}>
-        <TouchableOpacity style={styles.mapBtn} onPress={centerOnRoute}>
+      <View style={styles.mapControls} pointerEvents="box-none">
+        <TouchableOpacity
+          style={styles.mapBtn}
+          onPress={centerOnRoute}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
           <Ionicons name="locate" size={22} color={theme.primary} />
         </TouchableOpacity>
       </View>
@@ -258,13 +294,17 @@ export default function StudentScreen() {
                   <Ionicons name="bus" size={22} color={theme.onPrimary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.busIdText}>Autobús {selectedBus.busId}</Text>
+                  <Text style={styles.busIdText}>
+                    Autobús {selectedBus.busId}
+                  </Text>
                   <Text style={styles.busDriverText}>
                     Conductor: {selectedBus.driverId || 'Desconocido'}
                   </Text>
                 </View>
                 <View style={styles.speedBadge}>
-                  <Text style={[styles.speedBadgeValue, { color: theme.primary }]}>
+                  <Text
+                    style={[styles.speedBadgeValue, { color: theme.primary }]}
+                  >
                     {Math.round((selectedBus.speed || 0) * 3.6)}
                   </Text>
                   <Text style={styles.speedBadgeLabel}>km/h</Text>
@@ -336,177 +376,209 @@ export default function StudentScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f7f6' },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 16,
-  },
-  loadingText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-    gap: 12,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#333',
-    marginTop: 16,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-  },
-  stopMarker: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'white',
-  },
-  stopMarkerText: { fontWeight: 'bold', fontSize: 12 },
-  header: {
-    position: 'absolute',
-    top: 50,
-    left: 16,
-    right: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 16,
-    elevation: 5,
-  },
-  headerTitle: { fontSize: 20, fontWeight: 'bold' },
-  headerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 12,
-    marginTop: 4,
-    alignSelf: 'flex-start',
-    gap: 5,
-  },
-  headerDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#34C759' },
-  headerBadgeText: { fontSize: 11, fontWeight: '600' },
-  modeIndicator: { fontSize: 10, marginTop: 3, fontStyle: 'italic' },
-  profileBtn: { padding: 4 },
-  profileInitialWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileInitial: { fontSize: 16, fontWeight: 'bold' },
-  mapControls: { position: 'absolute', right: 16, bottom: 400, gap: 10 },
-  mapBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-  },
-  bottomSheet: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    maxHeight: 420,
-    backgroundColor: 'white',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 16,
-    elevation: 10,
-  },
-  handleBar: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#ddd',
-    alignSelf: 'center',
-    marginVertical: 12,
-  },
-  selectedCard: {
-    backgroundColor: '#f8faf9',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e8ecea',
-  },
-  selectedHeader: { flexDirection: 'row', alignItems: 'center' },
-  busIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  busIdText: { fontSize: 15, fontWeight: '600', color: '#333' },
-  busDriverText: { fontSize: 12, color: '#666', marginTop: 2 },
-  speedBadge: { alignItems: 'center' },
-  speedBadgeValue: { fontSize: 20, fontWeight: 'bold' },
-  speedBadgeLabel: { fontSize: 10, color: '#999' },
-  listCard: {
-    backgroundColor: '#f8faf9',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#e8ecea',
-    marginBottom: 12,
-  },
-  listTitle: { fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 12 },
-  busItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 6,
-    backgroundColor: 'white',
-  },
-  busItemSelected: {
-    backgroundColor: '#e9f0ec',
-    borderWidth: 1,
-    borderColor: '#4d7c68',
-  },
-  busItemIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#e9f0ec',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  busItemId: { fontSize: 13, fontWeight: '600', color: '#333' },
-  busItemDriver: { fontSize: 11, color: '#888', marginTop: 2 },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-  statusActive: { backgroundColor: '#e8f5e9' },
-  statusBadgeText: { fontSize: 11, fontWeight: '600', color: '#555' },
-  takeBusBtn: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  takeBusText: { fontSize: 15, fontWeight: '600' },
-});
+const createStyles = (c: AppearanceColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 16,
+    },
+    loadingText: { fontSize: 16, fontWeight: '600' },
+
+    emptyState: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 32,
+      gap: 12,
+      backgroundColor: c.background,
+    },
+    emptyTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: c.text,
+      marginTop: 16,
+    },
+    emptySubtitle: {
+      fontSize: 14,
+      color: c.textSecondary,
+      textAlign: 'center',
+    },
+
+    header: {
+      position: 'absolute',
+      top: 50,
+      left: 16,
+      right: 16,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderRadius: 16,
+      elevation: 20,
+      zIndex: 20,
+    },
+    headerTitle: { fontSize: 20, fontWeight: 'bold' },
+    headerBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+      borderRadius: 12,
+      marginTop: 4,
+      alignSelf: 'flex-start',
+      gap: 5,
+    },
+    headerDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: '#34C759',
+    },
+    headerBadgeText: { fontSize: 11, fontWeight: '600' },
+    modeIndicator: { fontSize: 10, marginTop: 3, fontStyle: 'italic' },
+
+    profileBtn: {
+      padding: 6,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    profileInitialWrap: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    profileInitial: { fontSize: 16, fontWeight: 'bold' },
+
+    mapControls: {
+      position: 'absolute',
+      right: 16,
+      bottom: 400,
+      zIndex: 15,
+    },
+    mapBtn: {
+      width: 46,
+      height: 46,
+      borderRadius: 23,
+      backgroundColor: c.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 6,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+
+    bottomSheet: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      maxHeight: 420,
+      backgroundColor: c.surface,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingHorizontal: 16,
+      elevation: 12,
+      zIndex: 10,
+      borderTopWidth: 1,
+      borderColor: c.border,
+    },
+    handleBar: {
+      width: 40,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: c.border,
+      alignSelf: 'center',
+      marginVertical: 12,
+    },
+
+    selectedCard: {
+      backgroundColor: c.card,
+      borderRadius: 14,
+      padding: 14,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    selectedHeader: { flexDirection: 'row', alignItems: 'center' },
+    busIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 12,
+    },
+    busIdText: { fontSize: 15, fontWeight: '600', color: c.text },
+    busDriverText: { fontSize: 12, color: c.textSecondary, marginTop: 2 },
+    speedBadge: { alignItems: 'center' },
+    speedBadgeValue: { fontSize: 20, fontWeight: 'bold' },
+    speedBadgeLabel: { fontSize: 10, color: c.textSecondary },
+
+    listCard: {
+      backgroundColor: c.card,
+      borderRadius: 14,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: c.border,
+      marginBottom: 12,
+    },
+    listTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: c.text,
+      marginBottom: 12,
+    },
+    busItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 10,
+      borderRadius: 10,
+      marginBottom: 6,
+      backgroundColor: c.surface,
+    },
+    busItemSelected: {
+      backgroundColor: c.tintGreen,
+      borderWidth: 1,
+      borderColor: c.brandText,
+    },
+    busItemIcon: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: c.tintGreen,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 10,
+    },
+    busItemId: { fontSize: 13, fontWeight: '600', color: c.text },
+    busItemDriver: { fontSize: 11, color: c.textSecondary, marginTop: 2 },
+
+    statusBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 10,
+    },
+    statusActive: { backgroundColor: c.tintGreen },
+    statusBadgeText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: c.textSecondary,
+    },
+
+    takeBusBtn: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 8,
+      paddingVertical: 14,
+      borderRadius: 12,
+    },
+    takeBusText: { fontSize: 15, fontWeight: '600' },
+  });
