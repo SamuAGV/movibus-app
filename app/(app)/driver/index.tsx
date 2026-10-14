@@ -1,8 +1,9 @@
 // app/(app)/driver/index.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Switch,
@@ -11,21 +12,38 @@ import {
   View,
 } from 'react-native';
 import { useAuth } from '../../../src/contexts/AuthContext';
-import { MOCK_TRIP_STATS } from '../../../src/data/mockData';
+import { useDriverLocation } from '../../../src/hooks/useLocation';
 
 export default function DriverScreen() {
   const { user } = useAuth();
-  const [isSharing, setIsSharing] = useState(false);
-  const [backgroundActive, setBackgroundActive] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<string>('');
+
+  const { location, error, isSharing, startSharing, stopSharing } =
+    useDriverLocation(user?.uid || 'demo-driver', 'BUS-001');
+
+  useEffect(() => {
+    if (location) {
+      setLastUpdate(new Date().toLocaleTimeString());
+    }
+  }, [location]);
+
+  useEffect(() => {
+    if (error) {
+      alert('Error: ' + error);
+    }
+  }, [error]);
 
   const toggleSharing = (value: boolean) => {
-    setIsSharing(value);
-    setBackgroundActive(value);
+    if (value) startSharing();
+    else stopSharing();
   };
+
+  const speedKmh = location?.speed ? Math.round(location.speed * 3.6) : 0;
 
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header */}
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>Panel del Conductor</Text>
@@ -41,9 +59,12 @@ export default function DriverScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Estado del servicio */}
         <View style={styles.statusCard}>
           <View style={styles.statusRow}>
-            <View style={[styles.dot, isSharing ? styles.dotActive : styles.dotInactive]} />
+            <View
+              style={[styles.dot, isSharing ? styles.dotActive : styles.dotInactive]}
+            />
             <Text style={styles.statusText}>
               {isSharing ? 'Compartiendo ubicación' : 'No compartiendo'}
             </Text>
@@ -56,6 +77,7 @@ export default function DriverScreen() {
           />
         </View>
 
+        {/* Info del viaje */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Información del Viaje</Text>
           <View style={styles.infoRow}>
@@ -72,60 +94,79 @@ export default function DriverScreen() {
           </View>
         </View>
 
+        {/* Ubicación actual */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Ubicación Actual</Text>
-          <View style={styles.coordsRow}>
-            <View style={styles.coordBox}>
-              <Text style={styles.coordLabel}>Latitud</Text>
-              <Text style={styles.coordValue}>19.432600</Text>
-            </View>
-            <View style={styles.coordBox}>
-              <Text style={styles.coordLabel}>Longitud</Text>
-              <Text style={styles.coordValue}>-99.133200</Text>
-            </View>
+          <View style={styles.locationHeader}>
+            <Text style={styles.cardTitle}>Ubicación Actual</Text>
+            {lastUpdate ? (
+              <Text style={styles.updateTime}>{lastUpdate}</Text>
+            ) : null}
           </View>
-          <View style={styles.speedBox}>
-            <Ionicons name="speedometer" size={20} color="#4caf50" />
-            <Text style={styles.speedText}>45 km/h</Text>
-          </View>
-        </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Estadísticas de Viaje</Text>
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{MOCK_TRIP_STATS.distance}</Text>
-              <Text style={styles.statLabel}>km</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{MOCK_TRIP_STATS.duration}</Text>
-              <Text style={styles.statLabel}>Duración</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>
-                {MOCK_TRIP_STATS.passengers}/{MOCK_TRIP_STATS.maxPassengers}
+          {location ? (
+            <>
+              <View style={styles.coordsRow}>
+                <View style={styles.coordBox}>
+                  <Text style={styles.coordLabel}>Latitud</Text>
+                  <Text style={styles.coordValue}>
+                    {location.latitude.toFixed(6)}
+                  </Text>
+                </View>
+                <View style={styles.coordBox}>
+                  <Text style={styles.coordLabel}>Longitud</Text>
+                  <Text style={styles.coordValue}>
+                    {location.longitude.toFixed(6)}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.speedBox}>
+                <Ionicons
+                  name={speedKmh === 0 ? 'pause-circle' : 'speedometer'}
+                  size={20}
+                  color={speedKmh === 0 ? '#FF9800' : '#4caf50'}
+                />
+                <Text
+                  style={[
+                    styles.speedText,
+                    { color: speedKmh === 0 ? '#FF9800' : '#4caf50' },
+                  ]}
+                >
+                  {speedKmh === 0 ? 'Detenido' : `${speedKmh} km/h`}
+                </Text>
+              </View>
+            </>
+          ) : (
+            <View style={styles.noLocationBox}>
+              <Ionicons name="location-outline" size={40} color="#ccc" />
+              <Text style={styles.noLocationText}>
+                Activa el switch para comenzar a compartir
               </Text>
-              <Text style={styles.statLabel}>Pasajeros</Text>
             </View>
-          </View>
+          )}
         </View>
 
-        <View style={styles.card}>
-          <View style={styles.backgroundRow}>
-            <Ionicons
-              name={backgroundActive ? 'cloud-done' : 'cloud-offline'}
-              size={24}
-              color={backgroundActive ? '#34C759' : '#999'}
-            />
-            <Text style={styles.backgroundText}>
-              {backgroundActive
-                ? 'Servicio en segundo plano activo'
-                : 'Servicio en segundo plano inactivo'}
-            </Text>
+        {/* Estadísticas */}
+        {isSharing && location && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Estadísticas de Viaje</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>En vivo</Text>
+                <Text style={styles.statLabel}>Estado</Text>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{speedKmh}</Text>
+                <Text style={styles.statLabel}>km/h</Text>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>OK</Text>
+                <Text style={styles.statLabel}>GPS</Text>
+              </View>
+            </View>
           </View>
-        </View>
+        )}
 
         <View style={{ height: 30 }} />
       </ScrollView>
@@ -182,6 +223,13 @@ const styles = StyleSheet.create({
     color: '#4d7c68',
     marginBottom: 12,
   },
+  locationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  updateTime: { fontSize: 11, color: '#999' },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -210,12 +258,20 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     gap: 8,
   },
-  speedText: { fontSize: 18, fontWeight: 'bold', color: '#4caf50' },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
+  speedText: { fontSize: 18, fontWeight: 'bold' },
+  noLocationBox: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    gap: 8,
+  },
+  noLocationText: { fontSize: 13, color: '#999', textAlign: 'center' },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
   statItem: { alignItems: 'center', flex: 1 },
   statValue: { fontSize: 18, fontWeight: 'bold', color: '#333' },
   statLabel: { fontSize: 11, color: '#999', marginTop: 4 },
   divider: { width: 1, height: 30, backgroundColor: '#e0e0e0' },
-  backgroundRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  backgroundText: { fontSize: 13, color: '#666', fontWeight: '500' },
 });

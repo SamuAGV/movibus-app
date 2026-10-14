@@ -1,11 +1,9 @@
 // app/(app)/student/index.tsx
-// VERSIÓN C: Autobús SVG + mapa día/noche + temas personalizables.
-// El color del header, botones y elementos del mapa se adaptan al tema elegido
-// por el estudiante (en Perfil → Personalización).
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,7 +14,7 @@ import MapView, { Marker, Polyline } from 'react-native-maps';
 import BusMarker, { BusSpriteRenderer } from './components/BusMarker';
 import { useAuth } from '../../../src/contexts/AuthContext';
 import { useTheme } from '../../../src/contexts/ThemeContext';
-import { MOCK_BUSES, MOCK_STOPS } from '../../../src/data/mockData';
+import { useStudentLocations } from '../../../src/hooks/useStudentLocations';
 import { useDayNightMap } from '../../../src/hooks/useDayNightMap';
 import { bestOnColor, hexToRgba, mapAccent } from '../../../src/theme/themes';
 
@@ -24,43 +22,144 @@ export default function StudentScreen() {
   const { user } = useAuth();
   const { theme } = useTheme();
   const mapRef = useRef<MapView | null>(null);
-  const [selectedBusId, setSelectedBusId] = useState(MOCK_BUSES[0].id);
+  const { buses: busesMap, loading, error } = useStudentLocations();
+  const [selectedBusId, setSelectedBusId] = useState<string | null>(null);
 
-  // 🌗 Hook de día/noche
   const { isNight, mapStyle, userInterfaceStyle } = useDayNightMap();
-
-  // 🎨 Color adaptado al tema Y al modo día/noche (para ruta y paradas)
   const routeColor = mapAccent(theme, isNight);
 
-  const selectedBus = MOCK_BUSES.find(b => b.id === selectedBusId) || MOCK_BUSES[0];
+  // 🎯 Solo los buses reales de la API
+  const buses = Object.values(busesMap);
 
-  const centerOnRoute = () => {
-    mapRef.current?.animateToRegion(
+  // 🎯 Auto-seleccionar el primer bus disponible
+  useEffect(() => {
+    if (!selectedBusId && buses.length > 0) {
+      setSelectedBusId(buses[0].busId);
+    }
+    // Si el bus seleccionado desaparece (ya no está activo), resetear
+    if (selectedBusId && !busesMap[selectedBusId]) {
+      setSelectedBusId(buses.length > 0 ? buses[0].busId : null);
+    }
+  }, [buses, busesMap, selectedBusId]);
+
+  // 🎯 Centrar el mapa en el primer bus cuando llegue (una sola vez)
+  const hasCenteredRef = useRef(false);
+  useEffect(() => {
+    if (hasCenteredRef.current) return;
+    if (buses.length === 0) return;
+    if (!mapRef.current) return;
+
+    const firstBus = buses[0];
+    console.log('🎯 Centrando mapa en:', firstBus.latitude, firstBus.longitude);
+
+    mapRef.current.animateToRegion(
       {
-        latitude: 19.4326,
-        longitude: -99.1332,
-        latitudeDelta: 0.03,
-        longitudeDelta: 0.03,
+        latitude: firstBus.latitude,
+        longitude: firstBus.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      },
+      800
+    );
+
+    hasCenteredRef.current = true;
+  }, [buses]);
+
+  const selectedBus = selectedBusId ? busesMap[selectedBusId] : null;
+
+  // 🎯 Botón "mi ubicación" → centra en el bus seleccionado
+  const centerOnRoute = () => {
+    const target = selectedBus || buses[0];
+    if (!target || !mapRef.current) return;
+
+    mapRef.current.animateToRegion(
+      {
+        latitude: target.latitude,
+        longitude: target.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
       },
       800
     );
   };
 
+  // Loading inicial
+  if (loading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: theme.primary }]}>
+        <ActivityIndicator size="large" color={theme.onPrimary} />
+        <Text style={[styles.loadingText, { color: theme.onPrimary }]}>
+          Conectando con los autobuses...
+        </Text>
+      </View>
+    );
+  }
+
+  // Sin buses activos
+  if (buses.length === 0) {
+    return (
+      <View style={styles.container}>
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: theme.primary,
+              borderWidth: 1,
+              borderColor: theme.edge,
+            },
+          ]}
+        >
+          <View>
+            <Text style={[styles.headerTitle, { color: theme.onPrimary }]}>MoviBus</Text>
+            <View
+              style={[
+                styles.headerBadge,
+                { backgroundColor: hexToRgba(theme.onPrimary, 0.2) },
+              ]}
+            >
+              <View style={styles.headerDot} />
+              <Text style={[styles.headerBadgeText, { color: theme.onPrimary }]}>
+                0 buses activos
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.profileBtn}
+            onPress={() => router.push('/(app)/profile')}
+          >
+            <View
+              style={[
+                styles.profileInitialWrap,
+                { backgroundColor: hexToRgba(theme.onPrimary, 0.2) },
+              ]}
+            >
+              <Text style={[styles.profileInitial, { color: theme.onPrimary }]}>
+                {user?.name?.charAt(0).toUpperCase() || 'U'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.emptyState}>
+          <Ionicons name="bus-outline" size={80} color="#ccc" />
+          <Text style={styles.emptyTitle}>No hay autobuses activos</Text>
+          <Text style={styles.emptySubtitle}>
+            {error
+              ? `Error: ${error}`
+              : 'Esperando a que los conductores comiencen a compartir su ubicación'}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {/* Renderiza los sprites del autobús (solo Android) */}
       <BusSpriteRenderer />
 
       <MapView
         ref={mapRef}
         style={StyleSheet.absoluteFillObject}
-        initialRegion={{
-          latitude: 19.4326,
-          longitude: -99.1332,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        }}
-        // 🌗 Estilo oscuro/claro automático
         customMapStyle={mapStyle}
         userInterfaceStyle={userInterfaceStyle}
         showsUserLocation={false}
@@ -68,56 +167,23 @@ export default function StudentScreen() {
         showsCompass={true}
         showsTraffic={false}
       >
-        {/* Marcadores de buses con SVG vectorial */}
-        {MOCK_BUSES.filter(b => b.isActive).map(bus => (
+        {/* Marcadores de buses reales */}
+        {buses.map((bus) => (
           <BusMarker
-            key={bus.id}
-            id={bus.id}
+            key={bus.busId}
+            id={bus.busId}
             latitude={bus.latitude}
             longitude={bus.longitude}
-            heading={45}
-            selected={selectedBusId === bus.id}
-            title={`Autobús ${bus.id}`}
-            description={`Conductor: ${bus.driverName}`}
-            onPress={() => setSelectedBusId(bus.id)}
+            heading={bus.heading || 45}
+            selected={selectedBusId === bus.busId}
+            title={`Autobús ${bus.busId}`}
+            description={`Velocidad: ${Math.round((bus.speed || 0) * 3.6)} km/h`}
+            onPress={() => setSelectedBusId(bus.busId)}
           />
         ))}
-
-        {/* Ruta con color del tema adaptado al mapa */}
-        <Polyline
-          coordinates={MOCK_STOPS.map(s => ({ latitude: s.latitude, longitude: s.longitude }))}
-          strokeWidth={4}
-          strokeColor={routeColor}
-        />
-
-        {/* Paradas con color del tema */}
-        {MOCK_STOPS.map((stop, index) => (
-          <Marker
-            key={stop.id}
-            coordinate={{ latitude: stop.latitude, longitude: stop.longitude }}
-            title={stop.name}
-            description={`Parada ${index + 1}`}
-          >
-            <View style={[styles.stopMarker, { backgroundColor: routeColor }]}>
-              <Text style={[styles.stopMarkerText, { color: bestOnColor(routeColor) }]}>
-                {index + 1}
-              </Text>
-            </View>
-          </Marker>
-        ))}
-
-        {/* Mi ubicación */}
-        <Marker
-          coordinate={{ latitude: 19.434, longitude: -99.135 }}
-          title="Mi ubicación"
-        >
-          <View style={styles.userMarker}>
-            <Ionicons name="person" size={16} color="white" />
-          </View>
-        </Marker>
       </MapView>
 
-      {/* 🎨 Header con color del tema */}
+      {/* Header */}
       <View
         style={[
           styles.header,
@@ -138,7 +204,7 @@ export default function StudentScreen() {
           >
             <View style={styles.headerDot} />
             <Text style={[styles.headerBadgeText, { color: theme.onPrimary }]}>
-              {MOCK_BUSES.filter(b => b.isActive).length} buses activos
+              {buses.length} {buses.length === 1 ? 'bus activo' : 'buses activos'}
             </Text>
           </View>
           <Text style={[styles.modeIndicator, { color: hexToRgba(theme.onPrimary, 0.7) }]}>
@@ -168,6 +234,7 @@ export default function StudentScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Bottom sheet */}
       <View style={styles.bottomSheet}>
         <View style={styles.handleBar} />
 
@@ -175,45 +242,46 @@ export default function StudentScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 20 }}
         >
-          <View style={styles.selectedCard}>
-            <View style={styles.selectedHeader}>
-              {/* 🎨 Icono del bus con color del tema */}
-              <View
-                style={[
-                  styles.busIcon,
-                  {
-                    backgroundColor: theme.primary,
-                    borderWidth: 1,
-                    borderColor: theme.edge,
-                  },
-                ]}
-              >
-                <Ionicons name="bus" size={22} color={theme.onPrimary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.busIdText}>Autobús {selectedBus.id}</Text>
-                <Text style={styles.busDriverText}>
-                  Conductor: {selectedBus.driverName}
-                </Text>
-              </View>
-              <View style={styles.speedBadge}>
-                <Text style={[styles.speedBadgeValue, { color: theme.primary }]}>
-                  {selectedBus.speed}
-                </Text>
-                <Text style={styles.speedBadgeLabel}>km/h</Text>
+          {selectedBus && (
+            <View style={styles.selectedCard}>
+              <View style={styles.selectedHeader}>
+                <View
+                  style={[
+                    styles.busIcon,
+                    {
+                      backgroundColor: theme.primary,
+                      borderWidth: 1,
+                      borderColor: theme.edge,
+                    },
+                  ]}
+                >
+                  <Ionicons name="bus" size={22} color={theme.onPrimary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.busIdText}>Autobús {selectedBus.busId}</Text>
+                  <Text style={styles.busDriverText}>
+                    Conductor: {selectedBus.driverId || 'Desconocido'}
+                  </Text>
+                </View>
+                <View style={styles.speedBadge}>
+                  <Text style={[styles.speedBadgeValue, { color: theme.primary }]}>
+                    {Math.round((selectedBus.speed || 0) * 3.6)}
+                  </Text>
+                  <Text style={styles.speedBadgeLabel}>km/h</Text>
+                </View>
               </View>
             </View>
-          </View>
+          )}
 
           <View style={styles.listCard}>
-            <Text style={styles.listTitle}>Autobuses disponibles</Text>
-            {MOCK_BUSES.map(bus => {
-              const isSelected = selectedBusId === bus.id;
+            <Text style={styles.listTitle}>Autobuses activos</Text>
+            {buses.map((bus) => {
+              const isSelected = selectedBusId === bus.busId;
               return (
                 <TouchableOpacity
-                  key={bus.id}
+                  key={bus.busId}
                   style={[styles.busItem, isSelected && styles.busItemSelected]}
-                  onPress={() => setSelectedBusId(bus.id)}
+                  onPress={() => setSelectedBusId(bus.busId)}
                 >
                   <View
                     style={[
@@ -232,17 +300,14 @@ export default function StudentScreen() {
                     />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.busItemId}>{bus.id}</Text>
-                    <Text style={styles.busItemDriver}>{bus.driverName}</Text>
+                    <Text style={styles.busItemId}>{bus.busId}</Text>
+                    <Text style={styles.busItemDriver}>
+                      {bus.driverId || 'Conductor'}
+                    </Text>
                   </View>
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      bus.isActive ? styles.statusActive : styles.statusInactive,
-                    ]}
-                  >
+                  <View style={[styles.statusBadge, styles.statusActive]}>
                     <Text style={styles.statusBadgeText}>
-                      {bus.isActive ? 'Activo' : 'Inactivo'}
+                      {Math.round((bus.speed || 0) * 3.6)} km/h
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -250,7 +315,6 @@ export default function StudentScreen() {
             })}
           </View>
 
-          {/* 🎨 Botón con color del tema */}
           <TouchableOpacity
             style={[
               styles.takeBusBtn,
@@ -274,6 +338,34 @@ export default function StudentScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f7f6' },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+    gap: 12,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
+    marginTop: 16,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+  },
   stopMarker: {
     width: 28,
     height: 28,
@@ -284,13 +376,6 @@ const styles = StyleSheet.create({
     borderColor: 'white',
   },
   stopMarkerText: { fontWeight: 'bold', fontSize: 12 },
-  userMarker: {
-    backgroundColor: '#007AFF',
-    padding: 8,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: 'white',
-  },
   header: {
     position: 'absolute',
     top: 50,
@@ -414,7 +499,6 @@ const styles = StyleSheet.create({
   busItemDriver: { fontSize: 11, color: '#888', marginTop: 2 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
   statusActive: { backgroundColor: '#e8f5e9' },
-  statusInactive: { backgroundColor: '#ffebee' },
   statusBadgeText: { fontSize: 11, fontWeight: '600', color: '#555' },
   takeBusBtn: {
     flexDirection: 'row',
