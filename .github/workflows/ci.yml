@@ -1,0 +1,57 @@
+name: CI - MoviBus
+
+on:
+  push:
+    branches: [main, develop, samuel]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build y Pruebas
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: 📥 Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: 🟢 Configurar Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: 📦 Instalar dependencias
+        run: npm ci
+
+      - name: 🔍 Verificar tipos con TypeScript
+        run: npm run typecheck
+
+      - name: 🏗️ Compilar proyecto (expo export)
+        run: npm run build
+        env:
+          CI: true
+
+      - name: 🧪 Ejecutar pruebas automatizadas
+        run: npm test
+
+      - name: 📊 Publicar reporte de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+      - name: 📦 Publicar artefacto del build
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: dist/
+          retention-days: 7
