@@ -2,15 +2,18 @@
 import { router, Stack, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
+import { AppearanceProvider, useAppearance } from '../../src/contexts/AppearanceContext';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { AvatarProvider } from '../../src/contexts/AvatarContext';
-import { ThemeProvider } from '../../src/contexts/ThemeContext';
+import { ThemeProvider, useTheme } from '../../src/contexts/ThemeContext';
 
 export default function AppLayout() {
   return (
     <ThemeProvider>
       <AvatarProvider>
-        <AppLayoutContent />
+        <AppearanceProvider>
+          <AppLayoutContent />
+        </AppearanceProvider>
       </AvatarProvider>
     </ThemeProvider>
   );
@@ -18,7 +21,11 @@ export default function AppLayout() {
 
 function AppLayoutContent() {
   const { user, loading } = useAuth();
+  const { theme } = useTheme();
+  const { colors, isDark } = useAppearance();
   const segments = useSegments();
+
+  const isStudent = user?.role !== 'driver';
 
   useEffect(() => {
     if (loading) return;
@@ -26,9 +33,21 @@ function AppLayoutContent() {
       router.replace('/(auth)/login');
       return;
     }
+
     const currentRoute = segments[1];
     const roleRoute = user.role === 'driver' ? 'driver' : 'student';
-    if (!currentRoute || (currentRoute !== roleRoute && currentRoute !== 'profile')) {
+
+    // Rutas permitidas para todos los roles autenticados
+    const sharedRoutes = ['profile', 'customization'];
+    const isShared = currentRoute && sharedRoutes.includes(currentRoute);
+    const isCorrectRole = currentRoute === roleRoute;
+
+    if (!currentRoute) {
+      router.replace(`/(app)/${roleRoute}`);
+      return;
+    }
+
+    if (!isCorrectRole && !isShared) {
       router.replace(`/(app)/${roleRoute}`);
     }
   }, [user, loading, segments]);
@@ -40,25 +59,54 @@ function AppLayoutContent() {
           flex: 1,
           justifyContent: 'center',
           alignItems: 'center',
-          backgroundColor: '#e9f0ec',
+          backgroundColor: colors.background,
         }}
       >
-        <ActivityIndicator size="large" color="#4d7c68" />
-        <Text style={{ marginTop: 16, color: '#4d7c68', fontSize: 16 }}>Cargando...</Text>
+        <ActivityIndicator size="large" color={colors.brandText} />
+        <Text style={{ marginTop: 16, color: colors.brandText, fontSize: 16 }}>
+          Cargando...
+        </Text>
       </View>
     );
   }
 
   return (
-    <Stack>
+    <Stack
+      screenOptions={{
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
       <Stack.Screen name="driver/index" options={{ headerShown: false }} />
       <Stack.Screen name="student/index" options={{ headerShown: false }} />
       <Stack.Screen
         name="profile"
         options={{
           title: 'Mi Perfil',
-          headerStyle: { backgroundColor: '#4d7c68' },
-          headerTintColor: '#fff',
+          headerStyle: {
+            backgroundColor: isDark ? colors.surface : '#4d7c68',
+          },
+          headerTintColor: isDark ? colors.text : '#fff',
+          headerTitleStyle: { fontWeight: 'bold' },
+          presentation: 'modal',
+        }}
+      />
+      <Stack.Screen
+        name="customization"
+        options={{
+          title: 'Personalización',
+          headerBackTitle: 'Perfil',
+          headerStyle: {
+            backgroundColor: isDark
+              ? colors.surface
+              : isStudent
+              ? theme.primary
+              : '#4d7c68',
+          },
+          headerTintColor: isDark
+            ? colors.text
+            : isStudent
+            ? theme.onPrimary
+            : '#fff',
           headerTitleStyle: { fontWeight: 'bold' },
         }}
       />
