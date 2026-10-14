@@ -11,10 +11,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AppearancePicker from '../../src/components/AppearancePicker';
-import { Avatar } from '../../src/components/Avatar';
-import AvatarPicker from '../../src/components/AvatarPicker';
-import ThemePicker from '../../src/components/ThemePicker';
 import { useAppearance } from '../../src/contexts/AppearanceContext';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useAvatar } from '../../src/contexts/AvatarContext';
@@ -29,7 +25,6 @@ export default function ProfileScreen() {
   const { avatar } = useAvatar();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  // El tema personalizado aplica a la experiencia del estudiante
   const isStudent = user?.role !== 'driver';
   const accent = isStudent ? theme.primary : colors.brandText;
   const onAccent = isStudent ? theme.onPrimary : '#FFFFFF';
@@ -147,32 +142,56 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      {/* Avatar (solo estudiantes) */}
-      {isStudent && (
-        <View style={styles.section}>
-          <AvatarPicker />
-        </View>
-      )}
-
-      {/* Apariencia: Automático / Claro / Oscuro (ambos roles) */}
+      {/* Acceso a la pantalla de Personalización */}
       <View style={styles.section}>
-        <AppearancePicker />
+        <TouchableOpacity
+          style={[styles.menuItem, styles.menuItemLast]}
+          onPress={() => router.push('/(app)/customization')}
+          accessibilityRole="button"
+          accessibilityLabel="Abrir personalización"
+        >
+          <View style={styles.menuItemLeft}>
+            <Ionicons
+              name="color-palette-outline"
+              size={22}
+              color={colors.text}
+              style={styles.menuIcon}
+            />
+            <View>
+              <Text style={styles.menuItemText}>Personalización</Text>
+              <Text style={styles.menuItemHint}>
+                {isStudent
+                  ? 'Avatar, color de la interfaz y apariencia'
+                  : 'Apariencia'}
+              </Text>
+            </View>
+          </View>
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={colors.textSecondary}
+          />
+        </TouchableOpacity>
       </View>
-
-      {/* Personalización del color (solo estudiantes) */}
-      {isStudent && (
-        <View style={styles.section}>
-          <ThemePicker />
-        </View>
-      )}
 
       {/* Seguridad */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Seguridad</Text>
         <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="lock-closed-outline" size={20} color={accent} />
-          <Text style={styles.menuText}>Cambiar contraseña</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+          <View style={styles.menuItemLeft}>
+            <Ionicons
+              name="lock-closed-outline"
+              size={22}
+              color={colors.text}
+              style={styles.menuIcon}
+            />
+            <Text style={styles.menuItemText}>Cambiar contraseña</Text>
+          </View>
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={colors.textSecondary}
+          />
         </TouchableOpacity>
       </View>
 
@@ -240,15 +259,38 @@ const createStyles = (c: AppearanceColors) =>
     label: { fontSize: 14, color: c.textSecondary },
     value: { fontSize: 14, fontWeight: '600', color: c.text },
     divider: { height: 1, backgroundColor: c.border },
+
+    // Fila de menú (para Personalización y Seguridad)
     menuItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: c.card,
-      padding: 16,
-      borderRadius: 14,
-      gap: 12,
+      justifyContent: 'space-between',
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
     },
-    menuText: { flex: 1, fontSize: 15, color: c.text },
+    menuItemLast: {
+      borderBottomWidth: 0,
+    },
+    menuItemLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    menuIcon: {
+      marginRight: 12,
+    },
+    menuItemText: {
+      fontSize: 16,
+      color: c.text,
+      fontWeight: '500',
+    },
+    menuItemHint: {
+      fontSize: 12,
+      color: c.textSecondary,
+      marginTop: 2,
+    },
+
     logoutBtn: {
       flexDirection: 'row',
       justifyContent: 'center',
