@@ -5,7 +5,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { AppearanceProvider, useAppearance } from '../../src/contexts/AppearanceContext';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { AvatarProvider } from '../../src/contexts/AvatarContext';
-import { ThemeProvider } from '../../src/contexts/ThemeContext';
+import { ThemeProvider, useTheme } from '../../src/contexts/ThemeContext';
 
 export default function AppLayout() {
   return (
@@ -21,8 +21,11 @@ export default function AppLayout() {
 
 function AppLayoutContent() {
   const { user, loading } = useAuth();
-  const segments = useSegments();
+  const { theme } = useTheme();
   const { colors, isDark } = useAppearance();
+  const segments = useSegments();
+
+  const isStudent = user?.role !== 'driver';
 
   useEffect(() => {
     if (loading) return;
@@ -31,12 +34,12 @@ function AppLayoutContent() {
       return;
     }
 
-    const currentRoute = segments[1]; // 'driver' | 'student' | 'profile' | undefined
+    const currentRoute = segments[1];
     const roleRoute = user.role === 'driver' ? 'driver' : 'student';
 
-    // Solo redirige si el usuario está en la raíz o en la ruta del otro rol.
-    // Deja pasar 'profile' siempre.
-    const isProfile = currentRoute === 'profile';
+    // Rutas permitidas para todos los roles autenticados
+    const sharedRoutes = ['profile', 'customization'];
+    const isShared = currentRoute && sharedRoutes.includes(currentRoute);
     const isCorrectRole = currentRoute === roleRoute;
 
     if (!currentRoute) {
@@ -44,7 +47,7 @@ function AppLayoutContent() {
       return;
     }
 
-    if (!isCorrectRole && !isProfile) {
+    if (!isCorrectRole && !isShared) {
       router.replace(`/(app)/${roleRoute}`);
     }
   }, [user, loading, segments]);
@@ -85,6 +88,26 @@ function AppLayoutContent() {
           headerTintColor: isDark ? colors.text : '#fff',
           headerTitleStyle: { fontWeight: 'bold' },
           presentation: 'modal',
+        }}
+      />
+      <Stack.Screen
+        name="customization"
+        options={{
+          title: 'Personalización',
+          headerBackTitle: 'Perfil',
+          headerStyle: {
+            backgroundColor: isDark
+              ? colors.surface
+              : isStudent
+              ? theme.primary
+              : '#4d7c68',
+          },
+          headerTintColor: isDark
+            ? colors.text
+            : isStudent
+            ? theme.onPrimary
+            : '#fff',
+          headerTitleStyle: { fontWeight: 'bold' },
         }}
       />
     </Stack>

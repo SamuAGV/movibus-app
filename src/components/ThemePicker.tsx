@@ -1,5 +1,5 @@
 // src/components/ThemePicker.tsx
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -11,7 +11,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useAppearance } from '../contexts/AppearanceContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { AppearanceColors } from '../theme/appearance';
 import {
   THEME_PRESETS,
   bestOnColor,
@@ -36,6 +38,8 @@ interface SliderProps {
 }
 
 const ColorSlider = ({ label, value, min, max, colorAt, onChange }: SliderProps) => {
+  const { colors } = useAppearance();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [width, setWidth] = useState(0);
   const widthRef = useRef(0);
   const onChangeRef = useRef(onChange);
@@ -93,6 +97,8 @@ const ColorSlider = ({ label, value, min, max, colorAt, onChange }: SliderProps)
 };
 
 export default function ThemePicker() {
+  const { colors } = useAppearance();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { theme, selectedId, customColor, invertedIds, selectPreset, selectCustom, togglePresetInversion } = useTheme();
   const lastTap = useRef<{ id: string; time: number } | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -250,9 +256,11 @@ export default function ThemePicker() {
               autoCorrect={false}
               maxLength={7}
               placeholder="#4D7C68"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.textSecondary}
             />
-            {!typedValid && <Text style={styles.hexError}>Escribe un color válido, por ejemplo #4D7C68</Text>}
+            {!typedValid && (
+              <Text style={styles.hexError}>Escribe un color válido, por ejemplo #4D7C68</Text>
+            )}
 
             <View style={styles.buttons}>
               <TouchableOpacity
@@ -264,7 +272,7 @@ export default function ThemePicker() {
               <TouchableOpacity
                 style={[
                   styles.btn,
-                  { backgroundColor: previewHex, borderWidth: 1, borderColor: '#E0E0E0' },
+                  { backgroundColor: previewHex, borderWidth: 1, borderColor: colors.border },
                   !typedValid && { opacity: 0.4 },
                 ]}
                 onPress={apply}
@@ -280,108 +288,129 @@ export default function ThemePicker() {
   );
 }
 
-const styles = StyleSheet.create({
-  title: { fontSize: 18, fontWeight: '600', color: '#333' },
-  subtitle: { fontSize: 12, color: '#999', marginTop: 4, marginBottom: 16 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  card: {
-    width: '30.5%',
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    backgroundColor: '#f8f8f8',
-  },
-  cardActive: { borderColor: '#333' },
-  swatch: {
-    width: '100%',
-    height: 56,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  swatchText: { fontSize: 20, fontWeight: '700' },
-  swatchDot: { position: 'absolute', right: 8, bottom: 8, width: 8, height: 8, borderRadius: 4 },
-  swatchEmpty: { borderStyle: 'dashed', borderColor: '#BBB', backgroundColor: '#fff' },
-  swatchPlus: { fontSize: 28, color: '#999', fontWeight: '300' },
-  cardLabel: { fontSize: 11, color: '#333', marginTop: 6, fontWeight: '500', textAlign: 'center' },
-  swapBadge: { position: 'absolute', left: 7, bottom: 3, fontSize: 14, fontWeight: '700', opacity: 0.8 },
-  check: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkText: { fontSize: 12, fontWeight: 'bold' },
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: 30,
-  },
-  sheetTitle: { fontSize: 20, fontWeight: 'bold', color: '#333', textAlign: 'center', marginBottom: 14 },
-  preview: {
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  previewTitle: { fontSize: 20, fontWeight: 'bold' },
-  previewSub: { fontSize: 12, marginTop: 2, opacity: 0.85 },
-  sliderBlock: { marginBottom: 14 },
-  sliderHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  sliderLabel: { fontSize: 13, color: '#666', fontWeight: '500' },
-  sliderValue: { fontSize: 13, color: '#999' },
-  track: { height: THUMB, justifyContent: 'center' },
-  segments: {
-    ...StyleSheet.absoluteFillObject,
-    top: 5,
-    bottom: 5,
-    flexDirection: 'row',
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  thumb: {
-    position: 'absolute',
-    top: 0,
-    width: THUMB,
-    height: THUMB,
-    borderRadius: THUMB / 2,
-    borderWidth: 3,
-    borderColor: 'white',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 4,
-  },
-  hexInput: {
-    marginTop: 6,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    padding: 12,
-    fontSize: 16,
-    color: '#333',
-  },
-  hexInvalid: { borderColor: '#FF3B30' },
-  hexError: { color: '#FF3B30', fontSize: 12, marginTop: 4 },
-  buttons: { flexDirection: 'row', gap: 12, marginTop: 18 },
-  btn: { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
-  btnCancel: { backgroundColor: '#f0f0f0' },
-  btnCancelText: { color: '#666', fontWeight: '600' },
-  btnApplyText: { fontWeight: '700', fontSize: 16 },
-});
+const createStyles = (c: AppearanceColors) =>
+  StyleSheet.create({
+    title: { fontSize: 18, fontWeight: '600', color: c.text },
+    subtitle: { fontSize: 12, color: c.textSecondary, marginTop: 4, marginBottom: 16 },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+    card: {
+      width: '30.5%',
+      alignItems: 'center',
+      padding: 8,
+      borderRadius: 14,
+      borderWidth: 2,
+      borderColor: 'transparent',
+      backgroundColor: c.card,
+    },
+    cardActive: { borderColor: c.text },
+    swatch: {
+      width: '100%',
+      height: 56,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: c.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    swatchText: { fontSize: 20, fontWeight: '700' },
+    swatchDot: { position: 'absolute', right: 8, bottom: 8, width: 8, height: 8, borderRadius: 4 },
+    swatchEmpty: { borderStyle: 'dashed', borderColor: c.textSecondary, backgroundColor: c.surface },
+    swatchPlus: { fontSize: 28, color: c.textSecondary, fontWeight: '300' },
+    cardLabel: {
+      fontSize: 11,
+      color: c.text,
+      marginTop: 6,
+      fontWeight: '500',
+      textAlign: 'center',
+    },
+    swapBadge: { position: 'absolute', left: 7, bottom: 3, fontSize: 14, fontWeight: '700', opacity: 0.8 },
+    check: {
+      position: 'absolute',
+      top: -6,
+      right: -6,
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      borderWidth: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    checkText: { fontSize: 12, fontWeight: 'bold' },
+
+    // Modal
+    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    sheet: {
+      backgroundColor: c.surface,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      padding: 20,
+      paddingBottom: 30,
+    },
+    sheetTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: c.text,
+      textAlign: 'center',
+      marginBottom: 14,
+    },
+    preview: {
+      borderRadius: 16,
+      paddingVertical: 16,
+      paddingHorizontal: 16,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    previewTitle: { fontSize: 20, fontWeight: 'bold' },
+    previewSub: { fontSize: 12, marginTop: 2, opacity: 0.85 },
+
+    // Sliders
+    sliderBlock: { marginBottom: 14 },
+    sliderHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+    sliderLabel: { fontSize: 13, color: c.textSecondary, fontWeight: '500' },
+    sliderValue: { fontSize: 13, color: c.textSecondary },
+    track: { height: THUMB, justifyContent: 'center' },
+    segments: {
+      ...StyleSheet.absoluteFillObject,
+      top: 5,
+      bottom: 5,
+      flexDirection: 'row',
+      borderRadius: 10,
+      overflow: 'hidden',
+    },
+    thumb: {
+      position: 'absolute',
+      top: 0,
+      width: THUMB,
+      height: THUMB,
+      borderRadius: THUMB / 2,
+      borderWidth: 3,
+      borderColor: 'white',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.3,
+      shadowRadius: 3,
+      elevation: 4,
+    },
+
+    // HEX input
+    hexInput: {
+      marginTop: 6,
+      backgroundColor: c.card,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: c.border,
+      padding: 12,
+      fontSize: 16,
+      color: c.text,
+    },
+    hexInvalid: { borderColor: '#FF3B30' },
+    hexError: { color: '#FF3B30', fontSize: 12, marginTop: 4 },
+
+    // Botones
+    buttons: { flexDirection: 'row', gap: 12, marginTop: 18 },
+    btn: { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+    btnCancel: { backgroundColor: c.card },
+    btnCancelText: { color: c.textSecondary, fontWeight: '600' },
+    btnApplyText: { fontWeight: '700', fontSize: 16 },
+  });
