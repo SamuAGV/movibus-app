@@ -72,7 +72,7 @@ export function isValidHex(hex: string): boolean {
 export function normalizeHex(hex: string): string {
   const clean = hex.startsWith('#') ? hex : `#${hex}`;
   if (clean.length === 4) {
-    return `#${clean[1]}${clean[1]}${clean[2]}${clean[2]}${clean[3]}${clean[3]}`;
+    return `#${clean[1]}${clean[1]}${clean[2]}${clean[2]}${clean[3]}${clean[3]}`.toUpperCase();
   }
   return clean.toUpperCase();
 }

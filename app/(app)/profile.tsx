@@ -1,27 +1,32 @@
 // app/(app)/profile.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import ThemePicker from '../../src/components/ThemePicker';
+import { useAppearance } from '../../src/contexts/AppearanceContext';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useAvatar } from '../../src/contexts/AvatarContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
+import { AppearanceColors } from '../../src/theme/appearance';
 import { edgeColor } from '../../src/theme/themes';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const { theme } = useTheme();
+  const { colors } = useAppearance();
+  const { avatar } = useAvatar();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
-  // El tema personalizado aplica a la experiencia del estudiante
   const isStudent = user?.role !== 'driver';
-  const accent = isStudent ? theme.primary : '#4d7c68';
+  const accent = isStudent ? theme.primary : colors.brandText;
   const onAccent = isStudent ? theme.onPrimary : '#FFFFFF';
   const accentEdge = isStudent ? edgeColor(theme) : 'transparent';
 
@@ -40,15 +45,34 @@ export default function ProfileScreen() {
   };
 
   const roleText = user?.role === 'driver' ? 'Conductor' : 'Estudiante';
-  const roleColor = user?.role === 'driver' ? '#4d7c68' : '#007AFF';
+  const roleColor = user?.role === 'driver' ? colors.brandText : '#007AFF';
 
   return (
     <ScrollView style={styles.container}>
+      {/* Header con avatar */}
       <View style={styles.header}>
-        <View style={[styles.avatar, { backgroundColor: roleColor }]}>
-          <Text style={styles.avatarText}>
-            {user?.name?.charAt(0).toUpperCase() || 'U'}
-          </Text>
+        <View
+          style={[
+            styles.avatar,
+            {
+              backgroundColor: avatar ? 'transparent' : roleColor,
+              borderWidth: isStudent ? 1 : 0,
+              borderColor: accentEdge,
+              overflow: 'hidden',
+            },
+          ]}
+        >
+          {avatar ? (
+            <Image
+              source={avatar.source}
+              style={{ width: 100, height: 100 }}
+              resizeMode="cover"
+            />
+          ) : (
+            <Text style={styles.avatarText}>
+              {user?.name?.charAt(0).toUpperCase() || 'U'}
+            </Text>
+          )}
         </View>
         <Text style={styles.userName}>{user?.name}</Text>
         <View style={[styles.roleBadge, { backgroundColor: roleColor + '20' }]}>
@@ -56,6 +80,7 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {/* Información Personal */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Información Personal</Text>
         <View style={styles.card}>
@@ -76,6 +101,7 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {/* Datos del Conductor */}
       {user?.role === 'driver' && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Datos del Conductor</Text>
@@ -93,6 +119,7 @@ export default function ProfileScreen() {
         </View>
       )}
 
+      {/* Datos del Estudiante */}
       {user?.role === 'student' && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Datos del Estudiante</Text>
@@ -115,22 +142,60 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      {/* Personalización del color (solo estudiantes) */}
-      {isStudent && (
-        <View style={styles.section}>
-          <ThemePicker />
-        </View>
-      )}
-
+      {/* Acceso a la pantalla de Personalización */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Seguridad</Text>
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="lock-closed-outline" size={20} color={accent} />
-          <Text style={styles.menuText}>Cambiar contraseña</Text>
-          <Ionicons name="chevron-forward" size={18} color="#ccc" />
+        <TouchableOpacity
+          style={[styles.menuItem, styles.menuItemLast]}
+          onPress={() => router.push('/(app)/customization')}
+          accessibilityRole="button"
+          accessibilityLabel="Abrir personalización"
+        >
+          <View style={styles.menuItemLeft}>
+            <Ionicons
+              name="color-palette-outline"
+              size={22}
+              color={colors.text}
+              style={styles.menuIcon}
+            />
+            <View>
+              <Text style={styles.menuItemText}>Personalización</Text>
+              <Text style={styles.menuItemHint}>
+                {isStudent
+                  ? 'Avatar, color de la interfaz y apariencia'
+                  : 'Apariencia'}
+              </Text>
+            </View>
+          </View>
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={colors.textSecondary}
+          />
         </TouchableOpacity>
       </View>
 
+      {/* Seguridad */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Seguridad</Text>
+        <TouchableOpacity style={styles.menuItem}>
+          <View style={styles.menuItemLeft}>
+            <Ionicons
+              name="lock-closed-outline"
+              size={22}
+              color={colors.text}
+              style={styles.menuIcon}
+            />
+            <Text style={styles.menuItemText}>Cambiar contraseña</Text>
+          </View>
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={colors.textSecondary}
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Cerrar sesión */}
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
         <Ionicons name="log-out-outline" size={20} color="white" />
         <Text style={styles.logoutText}>Cerrar sesión</Text>
@@ -142,59 +207,106 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  header: { alignItems: 'center', paddingVertical: 30, backgroundColor: 'white' },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  avatarText: { fontSize: 44, fontWeight: 'bold', color: 'white' },
-  userName: { fontSize: 22, fontWeight: 'bold', color: '#333' },
-  roleBadge: {
-    marginTop: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  roleText: { fontSize: 13, fontWeight: '600' },
-  section: { marginTop: 20, paddingHorizontal: 16, paddingVertical: 16, backgroundColor: 'white' },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#666',
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  card: { backgroundColor: '#f8f8f8', borderRadius: 14, padding: 16 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10 },
-  label: { fontSize: 14, color: '#888' },
-  value: { fontSize: 14, fontWeight: '600', color: '#333' },
-  divider: { height: 1, backgroundColor: '#f0f0f0' },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8f8f8',
-    padding: 16,
-    borderRadius: 14,
-    gap: 12,
-  },
-  menuText: { flex: 1, fontSize: 15, color: '#333' },
-  logoutBtn: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#FF3B30',
-    marginTop: 30,
-    marginHorizontal: 16,
-    paddingVertical: 16,
-    borderRadius: 12,
-  },
-  logoutText: { color: 'white', fontSize: 16, fontWeight: '600' },
-  version: { textAlign: 'center', color: '#999', fontSize: 12, marginTop: 24 },
-});
+const createStyles = (c: AppearanceColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    header: {
+      alignItems: 'center',
+      paddingVertical: 30,
+      backgroundColor: c.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    avatar: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    avatarText: { fontSize: 44, fontWeight: 'bold', color: 'white' },
+    userName: { fontSize: 22, fontWeight: 'bold', color: c.text },
+    roleBadge: {
+      marginTop: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 6,
+      borderRadius: 20,
+    },
+    roleText: { fontSize: 13, fontWeight: '600' },
+    section: {
+      marginTop: 20,
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+      backgroundColor: c.surface,
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: c.border,
+    },
+    sectionTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: c.textSecondary,
+      marginBottom: 8,
+      marginLeft: 4,
+    },
+    card: { backgroundColor: c.card, borderRadius: 14, padding: 16 },
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingVertical: 10,
+    },
+    label: { fontSize: 14, color: c.textSecondary },
+    value: { fontSize: 14, fontWeight: '600', color: c.text },
+    divider: { height: 1, backgroundColor: c.border },
+
+    // Fila de menú (para Personalización y Seguridad)
+    menuItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    menuItemLast: {
+      borderBottomWidth: 0,
+    },
+    menuItemLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    menuIcon: {
+      marginRight: 12,
+    },
+    menuItemText: {
+      fontSize: 16,
+      color: c.text,
+      fontWeight: '500',
+    },
+    menuItemHint: {
+      fontSize: 12,
+      color: c.textSecondary,
+      marginTop: 2,
+    },
+
+    logoutBtn: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: '#FF3B30',
+      marginTop: 30,
+      marginHorizontal: 16,
+      paddingVertical: 16,
+      borderRadius: 12,
+    },
+    logoutText: { color: 'white', fontSize: 16, fontWeight: '600' },
+    version: {
+      textAlign: 'center',
+      color: c.textSecondary,
+      fontSize: 12,
+      marginTop: 24,
+    },
+  });
