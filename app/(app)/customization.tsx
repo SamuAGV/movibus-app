@@ -1,12 +1,8 @@
-// app/(app)/customization.tsx
-// Pantalla de Personalización: reúne todas las opciones para no saturar el perfil.
-// Cada opción es un componente independiente que guarda su propio estado en el
-// dispositivo (AsyncStorage), así que no hay botón "Guardar": al volver al
-// perfil los cambios ya están aplicados.
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import AppearancePicker from '../../src/components/AppearancePicker';
 import AvatarPicker from '../../src/components/AvatarPicker';
+import ProfilePhotoPicker from '../../src/components/ProfilePhotoPicker'; // <- Importar
 import ThemePicker from '../../src/components/ThemePicker';
 import { useAppearance } from '../../src/contexts/AppearanceContext';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -14,15 +10,13 @@ import { AppearanceColors } from '../../src/theme/appearance';
 
 interface CustomizationSection {
   id: string;
-  /** true = solo se muestra al estudiante (el conductor solo personaliza la apariencia). */
   studentOnly?: boolean;
   Component: React.ComponentType;
 }
 
-// Orden en pantalla. Para incorporar una opción nueva (foto de perfil, tipo de autobús):
-//   1) crea su componente en src/components/ (con su propio contexto + AsyncStorage)
-//   2) agrégalo aquí: { id: 'bus-type', studentOnly: true, Component: BusTypePicker }
 const SECTIONS: CustomizationSection[] = [
+  // Añadimos la foto ANTES del avatar
+  { id: 'photo', studentOnly: true, Component: ProfilePhotoPicker },
   { id: 'avatar', studentOnly: true, Component: AvatarPicker },
   { id: 'theme', studentOnly: true, Component: ThemePicker },
   { id: 'appearance', Component: AppearancePicker },
@@ -33,7 +27,7 @@ export default function CustomizationScreen() {
   const { colors } = useAppearance();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const isStudent = user?.role !== 'driver'; // igual que el ruteo y el perfil
+  const isStudent = user?.role !== 'driver';
   const visible = SECTIONS.filter((s) => !s.studentOnly || isStudent);
 
   return (
