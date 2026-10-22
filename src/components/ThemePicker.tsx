@@ -407,7 +407,7 @@ const createStyles = (c: AppearanceColors) =>
     hexInvalid: { borderColor: '#FF3B30' },
     hexError: { color: '#FF3B30', fontSize: 12, marginTop: 4 },
 
-    // Botones
+    // Botones new
     buttons: { flexDirection: 'row', gap: 12, marginTop: 18 },
     btn: { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
     btnCancel: { backgroundColor: c.card },
