@@ -22,12 +22,12 @@ export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const { theme } = useTheme();
   const { colors } = useAppearance();
-  const { avatar } = useAvatar();
+  const { avatarSource, photoUri } = useAvatar();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const isStudent = user?.role !== 'driver';
-  const accent = isStudent ? theme.primary : colors.brandText;
-  const onAccent = isStudent ? theme.onPrimary : '#FFFFFF';
+  const roleText = user?.role === 'driver' ? 'Conductor' : 'Estudiante';
+  const roleColor = user?.role === 'driver' ? colors.brandText : '#007AFF';
   const accentEdge = isStudent ? edgeColor(theme) : 'transparent';
 
   const handleLogout = () => {
@@ -44,29 +44,23 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const roleText = user?.role === 'driver' ? 'Conductor' : 'Estudiante';
-  const roleColor = user?.role === 'driver' ? colors.brandText : '#007AFF';
-
   return (
     <ScrollView style={styles.container}>
-      {/* Header con avatar */}
       <View style={styles.header}>
         <View
           style={[
-            styles.avatar,
+            styles.avatarWrap,
             {
-              backgroundColor: avatar ? 'transparent' : roleColor,
               borderWidth: isStudent ? 1 : 0,
               borderColor: accentEdge,
-              overflow: 'hidden',
             },
           ]}
         >
-          {avatar ? (
+          {avatarSource ? (
             <Image
-              source={avatar.source}
-              style={{ width: 100, height: 100 }}
-              resizeMode="cover"
+              key={photoUri ?? 'static'}
+              source={avatarSource}
+              style={styles.avatarImage}
             />
           ) : (
             <Text style={styles.avatarText}>
@@ -80,7 +74,6 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* Información Personal */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Información Personal</Text>
         <View style={styles.card}>
@@ -101,7 +94,6 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* Datos del Conductor */}
       {user?.role === 'driver' && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Datos del Conductor</Text>
@@ -119,7 +111,6 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      {/* Datos del Estudiante */}
       {user?.role === 'student' && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Datos del Estudiante</Text>
@@ -142,7 +133,6 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      {/* Acceso a la pantalla de Personalización */}
       <View style={styles.section}>
         <TouchableOpacity
           style={[styles.menuItem, styles.menuItemLast]}
@@ -161,20 +151,15 @@ export default function ProfileScreen() {
               <Text style={styles.menuItemText}>Personalización</Text>
               <Text style={styles.menuItemHint}>
                 {isStudent
-                  ? 'Avatar, color de la interfaz y apariencia'
+                  ? 'Foto, avatar, color de la interfaz y apariencia'
                   : 'Apariencia'}
               </Text>
             </View>
           </View>
-          <Ionicons
-            name="chevron-forward"
-            size={18}
-            color={colors.textSecondary}
-          />
+          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
-      {/* Seguridad */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Seguridad</Text>
         <TouchableOpacity style={styles.menuItem}>
@@ -187,15 +172,10 @@ export default function ProfileScreen() {
             />
             <Text style={styles.menuItemText}>Cambiar contraseña</Text>
           </View>
-          <Ionicons
-            name="chevron-forward"
-            size={18}
-            color={colors.textSecondary}
-          />
+          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
-      {/* Cerrar sesión */}
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
         <Ionicons name="log-out-outline" size={20} color="white" />
         <Text style={styles.logoutText}>Cerrar sesión</Text>
@@ -217,14 +197,17 @@ const createStyles = (c: AppearanceColors) =>
       borderBottomWidth: 1,
       borderBottomColor: c.border,
     },
-    avatar: {
+    avatarWrap: {
       width: 100,
       height: 100,
       borderRadius: 50,
+      overflow: 'hidden',
+      marginBottom: 12,
+      backgroundColor: '#007AFF',
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 12,
     },
+    avatarImage: { width: 100, height: 100 },
     avatarText: { fontSize: 44, fontWeight: 'bold', color: 'white' },
     userName: { fontSize: 22, fontWeight: 'bold', color: c.text },
     roleBadge: {
@@ -259,8 +242,6 @@ const createStyles = (c: AppearanceColors) =>
     label: { fontSize: 14, color: c.textSecondary },
     value: { fontSize: 14, fontWeight: '600', color: c.text },
     divider: { height: 1, backgroundColor: c.border },
-
-    // Fila de menú (para Personalización y Seguridad)
     menuItem: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -269,28 +250,11 @@ const createStyles = (c: AppearanceColors) =>
       borderBottomWidth: 1,
       borderBottomColor: c.border,
     },
-    menuItemLast: {
-      borderBottomWidth: 0,
-    },
-    menuItemLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flex: 1,
-    },
-    menuIcon: {
-      marginRight: 12,
-    },
-    menuItemText: {
-      fontSize: 16,
-      color: c.text,
-      fontWeight: '500',
-    },
-    menuItemHint: {
-      fontSize: 12,
-      color: c.textSecondary,
-      marginTop: 2,
-    },
-
+    menuItemLast: { borderBottomWidth: 0 },
+    menuItemLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+    menuIcon: { marginRight: 12 },
+    menuItemText: { fontSize: 16, color: c.text, fontWeight: '500' },
+    menuItemHint: { fontSize: 12, color: c.textSecondary, marginTop: 2 },
     logoutBtn: {
       flexDirection: 'row',
       justifyContent: 'center',

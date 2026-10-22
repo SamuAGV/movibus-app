@@ -26,7 +26,7 @@ export default function StudentScreen() {
   const { user } = useAuth();
   const { theme } = useTheme();
   const { colors } = useAppearance();
-  const { avatar } = useAvatar();
+  const { avatarSource, photoUri } = useAvatar();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const mapRef = useRef<MapView | null>(null);
@@ -87,24 +87,23 @@ export default function StudentScreen() {
     );
   };
 
-  // Sub-componente reutilizable: círculo de avatar del header
-  const ProfileAvatar = () => (
+  // Sub-componente: círculo del header con la foto propia o la inicial
+  const HeaderAvatar = () => (
     <View
       style={[
         styles.profileInitialWrap,
         {
-          backgroundColor: avatar
-            ? 'transparent'
-            : hexToRgba(theme.onPrimary, 0.2),
-          borderWidth: avatar ? 1 : 0,
+          backgroundColor: avatarSource ? 'transparent' : hexToRgba(theme.onPrimary, 0.2),
+          borderWidth: avatarSource ? 1 : 0,
           borderColor: hexToRgba(theme.onPrimary, 0.4),
           overflow: 'hidden',
         },
       ]}
     >
-      {avatar ? (
+      {avatarSource ? (
         <Image
-          source={avatar.source}
+          key={photoUri ?? 'static'}
+          source={avatarSource}
           style={{ width: 42, height: 42 }}
           resizeMode="cover"
         />
@@ -165,7 +164,7 @@ export default function StudentScreen() {
             accessibilityRole="button"
             accessibilityLabel="Abrir perfil"
           >
-            <ProfileAvatar />
+            <HeaderAvatar />
           </TouchableOpacity>
         </View>
 
@@ -211,7 +210,6 @@ export default function StudentScreen() {
         ))}
       </MapView>
 
-      {/* Header flotante */}
       <View
         style={[
           styles.header,
@@ -256,7 +254,7 @@ export default function StudentScreen() {
           accessibilityRole="button"
           accessibilityLabel="Abrir perfil"
         >
-          <ProfileAvatar />
+          <HeaderAvatar />
         </TouchableOpacity>
       </View>
 
@@ -270,7 +268,6 @@ export default function StudentScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Bottom sheet */}
       <View style={styles.bottomSheet}>
         <View style={styles.handleBar} />
 
@@ -379,7 +376,6 @@ export default function StudentScreen() {
 const createStyles = (c: AppearanceColors) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: c.background },
-
     loadingContainer: {
       flex: 1,
       justifyContent: 'center',
@@ -387,7 +383,6 @@ const createStyles = (c: AppearanceColors) =>
       gap: 16,
     },
     loadingText: { fontSize: 16, fontWeight: '600' },
-
     emptyState: {
       flex: 1,
       justifyContent: 'center',
@@ -407,7 +402,6 @@ const createStyles = (c: AppearanceColors) =>
       color: c.textSecondary,
       textAlign: 'center',
     },
-
     header: {
       position: 'absolute',
       top: 50,
@@ -441,7 +435,6 @@ const createStyles = (c: AppearanceColors) =>
     },
     headerBadgeText: { fontSize: 11, fontWeight: '600' },
     modeIndicator: { fontSize: 10, marginTop: 3, fontStyle: 'italic' },
-
     profileBtn: {
       padding: 6,
       justifyContent: 'center',
@@ -455,7 +448,6 @@ const createStyles = (c: AppearanceColors) =>
       alignItems: 'center',
     },
     profileInitial: { fontSize: 16, fontWeight: 'bold' },
-
     mapControls: {
       position: 'absolute',
       right: 16,
@@ -473,7 +465,6 @@ const createStyles = (c: AppearanceColors) =>
       borderWidth: 1,
       borderColor: c.border,
     },
-
     bottomSheet: {
       position: 'absolute',
       bottom: 0,
@@ -497,7 +488,6 @@ const createStyles = (c: AppearanceColors) =>
       alignSelf: 'center',
       marginVertical: 12,
     },
-
     selectedCard: {
       backgroundColor: c.card,
       borderRadius: 14,
@@ -520,7 +510,6 @@ const createStyles = (c: AppearanceColors) =>
     speedBadge: { alignItems: 'center' },
     speedBadgeValue: { fontSize: 20, fontWeight: 'bold' },
     speedBadgeLabel: { fontSize: 10, color: c.textSecondary },
-
     listCard: {
       backgroundColor: c.card,
       borderRadius: 14,
@@ -559,7 +548,6 @@ const createStyles = (c: AppearanceColors) =>
     },
     busItemId: { fontSize: 13, fontWeight: '600', color: c.text },
     busItemDriver: { fontSize: 11, color: c.textSecondary, marginTop: 2 },
-
     statusBadge: {
       paddingHorizontal: 10,
       paddingVertical: 4,
@@ -571,7 +559,6 @@ const createStyles = (c: AppearanceColors) =>
       fontWeight: '600',
       color: c.textSecondary,
     },
-
     takeBusBtn: {
       flexDirection: 'row',
       justifyContent: 'center',
