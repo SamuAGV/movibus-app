@@ -1,4 +1,4 @@
-// src/components/Avatar.tsx — muestra el avatar elegido o la inicial como respaldo
+// src/components/Avatar.tsx — muestra foto propia > avatar > inicial
 import React from 'react';
 import { Image, Text, View } from 'react-native';
 import { useAvatar } from '../contexts/AvatarContext';
@@ -16,15 +16,15 @@ export const Avatar = ({
   backgroundColor = '#E5E7EB',
   textColor = '#374151',
 }: AvatarProps) => {
-  const { avatar } = useAvatar();
+  const { avatarSource } = useAvatar();
   const radius = size / 2;
 
-  if (avatar) {
+  if (avatarSource) {
     return (
       <Image
-        source={avatar.source}
+        source={avatarSource}
         style={{ width: size, height: size, borderRadius: radius }}
-        accessibilityLabel="Avatar de perfil"
+        accessibilityLabel="Foto de perfil"
       />
     );
   }
