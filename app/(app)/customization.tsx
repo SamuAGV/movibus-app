@@ -1,8 +1,10 @@
+// app/(app)/customization.tsx
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import AppearancePicker from '../../src/components/AppearancePicker';
 import AvatarPicker from '../../src/components/AvatarPicker';
-import ProfilePhotoPicker from '../../src/components/ProfilePhotoPicker'; // <- Importar
+import BusTypePicker from '../../src/components/BusTypePicker';
+import ProfilePhotoPicker from '../../src/components/ProfilePhotoPicker';
 import ThemePicker from '../../src/components/ThemePicker';
 import { useAppearance } from '../../src/contexts/AppearanceContext';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -15,10 +17,10 @@ interface CustomizationSection {
 }
 
 const SECTIONS: CustomizationSection[] = [
-  // Añadimos la foto ANTES del avatar
   { id: 'photo', studentOnly: true, Component: ProfilePhotoPicker },
   { id: 'avatar', studentOnly: true, Component: AvatarPicker },
   { id: 'theme', studentOnly: true, Component: ThemePicker },
+  { id: 'bus-type', studentOnly: true, Component: BusTypePicker },
   { id: 'appearance', Component: AppearancePicker },
 ];
 
