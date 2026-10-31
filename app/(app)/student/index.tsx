@@ -3,7 +3,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
   ScrollView,
   StyleSheet,
@@ -117,11 +116,30 @@ export default function StudentScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.primary }]}>
-        <ActivityIndicator size="large" color={theme.onPrimary} />
-        <Text style={[styles.loadingText, { color: theme.onPrimary }]}>
-          Conectando con los autobuses...
-        </Text>
+      <View style={styles.container}>
+        <View style={styles.mapSkeleton} />
+        <View style={[styles.skeletonHeader, { backgroundColor: theme.primary }]}>
+          <View>
+            <Text style={[styles.headerTitle, { color: theme.onPrimary }]}>MoviBus</Text>
+            <View style={[styles.skeletonLine, styles.skeletonBadge]} />
+          </View>
+          <View style={[styles.profileInitialWrap, styles.skeletonShape]} />
+        </View>
+        <View style={styles.skeletonSheet}>
+          <View style={styles.handleBar} />
+          <View style={styles.skeletonCard}>
+            <View style={[styles.skeletonShape, styles.skeletonIcon]} />
+            <View style={{ flex: 1, gap: 8 }}>
+              <View style={[styles.skeletonLine, { width: '55%' }]} />
+              <View style={[styles.skeletonLine, { width: '38%' }]} />
+            </View>
+          </View>
+          <View style={styles.skeletonCard}>
+            <View style={[styles.skeletonLine, { width: '45%', marginBottom: 8 }]} />
+            <View style={[styles.skeletonLine, { width: '100%', height: 42 }]} />
+            <View style={[styles.skeletonLine, { width: '100%', height: 42, marginTop: 8 }]} />
+          </View>
+        </View>
       </View>
     );
   }
@@ -376,13 +394,25 @@ export default function StudentScreen() {
 const createStyles = (c: AppearanceColors) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: c.background },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      gap: 16,
+    mapSkeleton: { ...StyleSheet.absoluteFillObject, backgroundColor: c.card },
+    skeletonHeader: {
+      position: 'absolute', top: 50, left: 16, right: 16,
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, zIndex: 20,
     },
-    loadingText: { fontSize: 16, fontWeight: '600' },
+    skeletonSheet: {
+      position: 'absolute', bottom: 0, left: 0, right: 0, maxHeight: 420,
+      backgroundColor: c.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+      paddingHorizontal: 16, paddingBottom: 20, borderWidth: 1, borderColor: c.border,
+    },
+    skeletonCard: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      backgroundColor: c.card, borderRadius: 14, padding: 14, marginBottom: 12,
+    },
+    skeletonLine: { height: 12, borderRadius: 6, backgroundColor: c.border },
+    skeletonBadge: { width: 95, height: 10, marginTop: 8 },
+    skeletonShape: { backgroundColor: c.border },
+    skeletonIcon: { width: 44, height: 44, borderRadius: 22 },
     emptyState: {
       flex: 1,
       justifyContent: 'center',
