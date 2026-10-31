@@ -3,6 +3,12 @@
     "name": "MoviBus-Demo",
     "slug": "MoviBus-Demo",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "checkAutomatically": "ON_LOAD"
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -28,6 +34,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-updates",
       [
         "expo-image-picker",
         {
