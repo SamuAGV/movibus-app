@@ -3,7 +3,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Switch,
@@ -140,6 +139,14 @@ export default function DriverScreen() {
                 </Text>
               </View>
             </>
+          ) : isSharing ? (
+            <View style={styles.locationSkeleton} accessibilityLabel="Cargando ubicación">
+              <View style={styles.skeletonCoordsRow}>
+                <View style={styles.skeletonCoordBox} />
+                <View style={styles.skeletonCoordBox} />
+              </View>
+              <View style={styles.skeletonSpeedBox} />
+            </View>
           ) : (
             <View style={styles.noLocationBox}>
               <Ionicons name="location-outline" size={40} color={colors.textSecondary} />
@@ -276,6 +283,13 @@ const createStyles = (c: AppearanceColors) =>
       gap: 8,
     },
     speedText: { fontSize: 18, fontWeight: 'bold' },
+
+    locationSkeleton: { gap: 12 },
+    skeletonCoordsRow: { flexDirection: 'row', gap: 10 },
+    skeletonCoordBox: {
+      flex: 1, height: 64, borderRadius: 10, backgroundColor: c.border,
+    },
+    skeletonSpeedBox: { height: 46, borderRadius: 10, backgroundColor: c.border },
 
     noLocationBox: {
       alignItems: 'center',
