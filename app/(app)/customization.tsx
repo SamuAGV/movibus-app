@@ -16,10 +16,12 @@ interface CustomizationSection {
   Component: React.ComponentType;
 }
 
+// HU-40: ThemePicker y AppearancePicker visibles para ambos roles.
+// Foto, avatar y tipo de autobús siguen siendo exclusivos del estudiante.
 const SECTIONS: CustomizationSection[] = [
   { id: 'photo', studentOnly: true, Component: ProfilePhotoPicker },
   { id: 'avatar', studentOnly: true, Component: AvatarPicker },
-  { id: 'theme', studentOnly: true, Component: ThemePicker },
+  { id: 'theme', Component: ThemePicker },
   { id: 'bus-type', studentOnly: true, Component: BusTypePicker },
   { id: 'appearance', Component: AppearancePicker },
 ];

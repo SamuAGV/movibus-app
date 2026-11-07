@@ -28,8 +28,6 @@ function AppLayoutContent() {
   const { colors, isDark } = useAppearance();
   const segments = useSegments();
 
-  const isStudent = user?.role !== 'driver';
-
   useEffect(() => {
     if (loading) return;
     if (!user) {
@@ -85,9 +83,9 @@ function AppLayoutContent() {
         options={{
           title: 'Mi Perfil',
           headerStyle: {
-            backgroundColor: isDark ? colors.surface : '#4d7c68',
+            backgroundColor: isDark ? colors.surface : theme.primary,
           },
-          headerTintColor: isDark ? colors.text : '#fff',
+          headerTintColor: isDark ? colors.text : theme.onPrimary,
           headerTitleStyle: { fontWeight: 'bold' },
           presentation: 'modal',
         }}
@@ -98,17 +96,9 @@ function AppLayoutContent() {
           title: 'Personalización',
           headerBackTitle: 'Perfil',
           headerStyle: {
-            backgroundColor: isDark
-              ? colors.surface
-              : isStudent
-              ? theme.primary
-              : '#4d7c68',
+            backgroundColor: isDark ? colors.surface : theme.primary,
           },
-          headerTintColor: isDark
-            ? colors.text
-            : isStudent
-            ? theme.onPrimary
-            : '#fff',
+          headerTintColor: isDark ? colors.text : theme.onPrimary,
           headerTitleStyle: { fontWeight: 'bold' },
         }}
       />

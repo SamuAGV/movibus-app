@@ -15,12 +15,15 @@ import OccupancyCard, {
 } from '../../../src/components/OccupancyCard';
 import { useAppearance } from '../../../src/contexts/AppearanceContext';
 import { useAuth } from '../../../src/contexts/AuthContext';
+import { useTheme } from '../../../src/contexts/ThemeContext';
 import { useDriverLocation } from '../../../src/hooks/useLocation';
 import { AppearanceColors } from '../../../src/theme/appearance';
+import { hexToRgba } from '../../../src/theme/themes';
 
 export default function DriverScreen() {
   const { user } = useAuth();
   const { colors } = useAppearance();
+  const { theme } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [lastUpdate, setLastUpdate] = useState<string>('');
@@ -62,17 +65,40 @@ export default function DriverScreen() {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header verde institucional */}
-        <View style={styles.header}>
+        {/* Header: sigue el tema elegido (HU-40) */}
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: theme.primary,
+              borderWidth: 1,
+              borderColor: theme.edge,
+            },
+          ]}
+        >
           <View>
-            <Text style={styles.title}>Panel del Conductor</Text>
-            <Text style={styles.subtitle}>Bienvenido, {user?.name}</Text>
+            <Text style={[styles.title, { color: theme.onPrimary }]}>
+              Panel del Conductor
+            </Text>
+            <Text
+              style={[
+                styles.subtitle,
+                { color: theme.onPrimary, opacity: 0.85 },
+              ]}
+            >
+              Bienvenido, {user?.name}
+            </Text>
           </View>
           <TouchableOpacity
-            style={styles.profileBtn}
+            style={[
+              styles.profileBtn,
+              { backgroundColor: hexToRgba(theme.onPrimary, 0.2) },
+            ]}
             onPress={() => router.push('/(app)/profile')}
+            accessibilityRole="button"
+            accessibilityLabel="Abrir perfil"
           >
-            <Text style={styles.profileInitial}>
+            <Text style={[styles.profileInitial, { color: theme.onPrimary }]}>
               {user?.name?.charAt(0).toUpperCase() || 'U'}
             </Text>
           </TouchableOpacity>
@@ -227,24 +253,23 @@ const createStyles = (c: AppearanceColors) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: c.background },
 
+    // Header: SOLO layout. Colores vienen del theme (inline).
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
       padding: 20,
-      backgroundColor: '#4d7c68',
     },
-    title: { fontSize: 22, fontWeight: 'bold', color: 'white' },
-    subtitle: { fontSize: 13, color: 'rgba(255,255,255,0.9)', marginTop: 2 },
+    title: { fontSize: 22, fontWeight: 'bold' },
+    subtitle: { fontSize: 13, marginTop: 2 },
     profileBtn: {
       width: 46,
       height: 46,
       borderRadius: 23,
-      backgroundColor: 'rgba(255,255,255,0.2)',
       justifyContent: 'center',
       alignItems: 'center',
     },
-    profileInitial: { fontSize: 18, fontWeight: 'bold', color: 'white' },
+    profileInitial: { fontSize: 18, fontWeight: 'bold' },
 
     // ⚠️ SOLO DEMO
     demoRow: {

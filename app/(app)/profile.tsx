@@ -152,7 +152,7 @@ export default function ProfileScreen() {
               <Text style={styles.menuItemHint}>
                 {isStudent
                   ? 'Foto, avatar, color de la interfaz y apariencia'
-                  : 'Apariencia'}
+                  : 'Color de la interfaz y apariencia'}
               </Text>
             </View>
           </View>
