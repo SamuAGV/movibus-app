@@ -10,6 +10,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import OccupancyCard, {
+  OccupancyStatus,
+} from '../../../src/components/OccupancyCard';
 import { useAppearance } from '../../../src/contexts/AppearanceContext';
 import { useAuth } from '../../../src/contexts/AuthContext';
 import { useDriverLocation } from '../../../src/hooks/useLocation';
@@ -21,6 +24,11 @@ export default function DriverScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [lastUpdate, setLastUpdate] = useState<string>('');
+
+  // ⚠️ SOLO DEMO: fuerza el estado visual de la tarjeta de ocupación.
+  // Cuando conectes Firebase RTDB, borra este bloque y pasa datos reales.
+  const [demoOccupancy, setDemoOccupancy] = useState<OccupancyStatus>('ok');
+  const [demoPassengers, setDemoPassengers] = useState(14);
 
   const { location, error, isSharing, startSharing, stopSharing } =
     useDriverLocation(user?.uid || 'demo-driver', 'BUS-001');
@@ -44,10 +52,17 @@ export default function DriverScreen() {
 
   const speedKmh = location?.speed ? Math.round(location.speed * 3.6) : 0;
 
+  // ⚠️ SOLO DEMO: al elegir "full" el slider de pasajeros se va a 32.
+  const handleDemoStatus = (s: OccupancyStatus) => {
+    setDemoOccupancy(s);
+    if (s === 'full') setDemoPassengers(32);
+    else if (s === 'ok' && demoPassengers >= 32) setDemoPassengers(14);
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header verde institucional (se mantiene fijo, no depende del modo) */}
+        {/* Header verde institucional */}
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>Panel del Conductor</Text>
@@ -61,6 +76,30 @@ export default function DriverScreen() {
               {user?.name?.charAt(0).toUpperCase() || 'U'}
             </Text>
           </TouchableOpacity>
+        </View>
+
+        {/* ⚠️ SOLO DEMO: selector de estado para probar la tarjeta.
+            BÓRRALO cuando conectes Firebase. */}
+        <View style={styles.demoRow}>
+          {(['loading', 'no-trip', 'ok', 'full'] as const).map((s) => (
+            <TouchableOpacity
+              key={s}
+              onPress={() => handleDemoStatus(s)}
+              style={[
+                styles.demoChip,
+                demoOccupancy === s && styles.demoChipActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.demoChipText,
+                  demoOccupancy === s && styles.demoChipTextActive,
+                ]}
+              >
+                {s}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         {/* Estado del servicio */}
@@ -80,6 +119,12 @@ export default function DriverScreen() {
             thumbColor={isSharing ? colors.brandText : '#f4f3f4'}
           />
         </View>
+
+        {/* ── TARJETA DE OCUPACIÓN (solo UI) ── */}
+        <OccupancyCard
+          demoStatus={demoOccupancy}
+          demoPassengers={demoPassengers}
+        />
 
         {/* Info del viaje */}
         <View style={styles.card}>
@@ -139,14 +184,6 @@ export default function DriverScreen() {
                 </Text>
               </View>
             </>
-          ) : isSharing ? (
-            <View style={styles.locationSkeleton} accessibilityLabel="Cargando ubicación">
-              <View style={styles.skeletonCoordsRow}>
-                <View style={styles.skeletonCoordBox} />
-                <View style={styles.skeletonCoordBox} />
-              </View>
-              <View style={styles.skeletonSpeedBox} />
-            </View>
           ) : (
             <View style={styles.noLocationBox}>
               <Ionicons name="location-outline" size={40} color={colors.textSecondary} />
@@ -190,7 +227,6 @@ const createStyles = (c: AppearanceColors) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: c.background },
 
-    // Header verde institucional (fijo, no cambia con el modo)
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -209,6 +245,26 @@ const createStyles = (c: AppearanceColors) =>
       alignItems: 'center',
     },
     profileInitial: { fontSize: 18, fontWeight: 'bold', color: 'white' },
+
+    // ⚠️ SOLO DEMO
+    demoRow: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: 8,
+      marginTop: 12,
+      marginHorizontal: 16,
+    },
+    demoChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: c.card,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    demoChipActive: { backgroundColor: '#4d7c68', borderColor: '#4d7c68' },
+    demoChipText: { fontSize: 11, color: c.textSecondary, fontWeight: '600' },
+    demoChipTextActive: { color: '#fff' },
 
     statusCard: {
       flexDirection: 'row',
@@ -283,13 +339,6 @@ const createStyles = (c: AppearanceColors) =>
       gap: 8,
     },
     speedText: { fontSize: 18, fontWeight: 'bold' },
-
-    locationSkeleton: { gap: 12 },
-    skeletonCoordsRow: { flexDirection: 'row', gap: 10 },
-    skeletonCoordBox: {
-      flex: 1, height: 64, borderRadius: 10, backgroundColor: c.border,
-    },
-    skeletonSpeedBox: { height: 46, borderRadius: 10, backgroundColor: c.border },
 
     noLocationBox: {
       alignItems: 'center',
