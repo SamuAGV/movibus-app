@@ -1,6 +1,7 @@
 // src/hooks/useLocation.ts
 import * as Location from 'expo-location';
 import { useEffect, useRef, useState } from 'react';
+import { useTrip } from '../contexts/TripContext';
 import { api } from '../services/api';
 import { BusLocation } from '../types';
 
@@ -10,6 +11,13 @@ export const useDriverLocation = (driverId: string, busId: string) => {
   const [isSharing, setIsSharing] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isSharingRef = useRef(false);
+
+  // Hook del viaje: cada punto también se acumula aquí
+  const { addTripLog, isTripActive } = useTrip();
+  const addTripLogRef = useRef(addTripLog);
+  addTripLogRef.current = addTripLog;
+  const isTripActiveRef = useRef(isTripActive);
+  isTripActiveRef.current = isTripActive;
 
   const sendLocation = async () => {
     try {
@@ -29,6 +37,12 @@ export const useDriverLocation = (driverId: string, busId: string) => {
       };
 
       setLocation(busLocation);
+
+      // Guardar en el viaje en curso (si hay uno activo)
+      if (isTripActiveRef.current) {
+        addTripLogRef.current(busLocation);
+      }
+
       await api.post('/location', busLocation);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error de ubicación');
