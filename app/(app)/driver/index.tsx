@@ -16,6 +16,7 @@ import OccupancyCard, {
 import { useAppearance } from '../../../src/contexts/AppearanceContext';
 import { useAuth } from '../../../src/contexts/AuthContext';
 import { useTheme } from '../../../src/contexts/ThemeContext';
+import { useTrip } from '../../../src/contexts/TripContext';
 import { useDriverLocation } from '../../../src/hooks/useLocation';
 import { AppearanceColors } from '../../../src/theme/appearance';
 import { hexToRgba } from '../../../src/theme/themes';
@@ -28,8 +29,10 @@ export default function DriverScreen() {
 
   const [lastUpdate, setLastUpdate] = useState<string>('');
 
+  // Hook del viaje en curso
+  const { isTripActive, startTrip } = useTrip();
+
   // ⚠️ SOLO DEMO: fuerza el estado visual de la tarjeta de ocupación.
-  // Cuando conectes Firebase RTDB, borra este bloque y pasa datos reales.
   const [demoOccupancy, setDemoOccupancy] = useState<OccupancyStatus>('ok');
   const [demoPassengers, setDemoPassengers] = useState(14);
 
@@ -49,13 +52,22 @@ export default function DriverScreen() {
   }, [error]);
 
   const toggleSharing = (value: boolean) => {
-    if (value) startSharing();
-    else stopSharing();
+    if (value) {
+      // Inicia el viaje (acumula logs) y comienza a compartir
+      if (!isTripActive) startTrip();
+      startSharing();
+    } else {
+      stopSharing();
+    }
+  };
+
+  const handleFinishTrip = () => {
+    stopSharing();
+    router.push('/(app)/trip-summary');
   };
 
   const speedKmh = location?.speed ? Math.round(location.speed * 3.6) : 0;
 
-  // ⚠️ SOLO DEMO: al elegir "full" el slider de pasajeros se va a 32.
   const handleDemoStatus = (s: OccupancyStatus) => {
     setDemoOccupancy(s);
     if (s === 'full') setDemoPassengers(32);
@@ -65,7 +77,7 @@ export default function DriverScreen() {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header: sigue el tema elegido (HU-40) */}
+        {/* Header */}
         <View
           style={[
             styles.header,
@@ -104,8 +116,7 @@ export default function DriverScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* ⚠️ SOLO DEMO: selector de estado para probar la tarjeta.
-            BÓRRALO cuando conectes Firebase. */}
+        {/* Selector demo */}
         <View style={styles.demoRow}>
           {(['loading', 'no-trip', 'ok', 'full'] as const).map((s) => (
             <TouchableOpacity
@@ -146,7 +157,29 @@ export default function DriverScreen() {
           />
         </View>
 
-        {/* ── TARJETA DE OCUPACIÓN (solo UI) ── */}
+        {/* Botón Finalizar Viaje (solo cuando está compartiendo) */}
+        {isSharing && (
+          <TouchableOpacity
+            style={[
+              styles.endTripBtn,
+              { backgroundColor: theme.primary, borderColor: theme.edge },
+            ]}
+            onPress={handleFinishTrip}
+            accessibilityRole="button"
+            accessibilityLabel="Finalizar viaje y ver resumen"
+          >
+            <Ionicons
+              name="stop-circle-outline"
+              size={20}
+              color={theme.onPrimary}
+            />
+            <Text style={[styles.endTripText, { color: theme.onPrimary }]}>
+              Finalizar Viaje
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Tarjeta de ocupación */}
         <OccupancyCard
           demoStatus={demoOccupancy}
           demoPassengers={demoPassengers}
@@ -212,7 +245,11 @@ export default function DriverScreen() {
             </>
           ) : (
             <View style={styles.noLocationBox}>
-              <Ionicons name="location-outline" size={40} color={colors.textSecondary} />
+              <Ionicons
+                name="location-outline"
+                size={40}
+                color={colors.textSecondary}
+              />
               <Text style={styles.noLocationText}>
                 Activa el switch para comenzar a compartir
               </Text>
@@ -252,8 +289,6 @@ export default function DriverScreen() {
 const createStyles = (c: AppearanceColors) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: c.background },
-
-    // Header: SOLO layout. Colores vienen del theme (inline).
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -271,7 +306,6 @@ const createStyles = (c: AppearanceColors) =>
     },
     profileInitial: { fontSize: 18, fontWeight: 'bold' },
 
-    // ⚠️ SOLO DEMO
     demoRow: {
       flexDirection: 'row',
       justifyContent: 'center',
@@ -308,6 +342,19 @@ const createStyles = (c: AppearanceColors) =>
     dotActive: { backgroundColor: '#34C759' },
     dotInactive: { backgroundColor: '#FF3B30' },
     statusText: { fontSize: 15, fontWeight: '600', color: c.text },
+
+    endTripBtn: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 8,
+      marginHorizontal: 16,
+      marginBottom: 16,
+      paddingVertical: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+    },
+    endTripText: { fontSize: 15, fontWeight: '700' },
 
     card: {
       backgroundColor: c.surface,
@@ -365,11 +412,7 @@ const createStyles = (c: AppearanceColors) =>
     },
     speedText: { fontSize: 18, fontWeight: 'bold' },
 
-    noLocationBox: {
-      alignItems: 'center',
-      paddingVertical: 24,
-      gap: 8,
-    },
+    noLocationBox: { alignItems: 'center', paddingVertical: 24, gap: 8 },
     noLocationText: {
       fontSize: 13,
       color: c.textSecondary,
