@@ -7,15 +7,18 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { AvatarProvider } from '../../src/contexts/AvatarContext';
 import { BusTypeProvider } from '../../src/contexts/BusTypeContext';
 import { ThemeProvider, useTheme } from '../../src/contexts/ThemeContext';
+import { TripProvider } from '../../src/contexts/TripContext';
 
 export default function AppLayout() {
   return (
     <ThemeProvider>
       <AvatarProvider>
         <BusTypeProvider>
-          <AppearanceProvider>
-            <AppLayoutContent />
-          </AppearanceProvider>
+          <TripProvider>
+            <AppearanceProvider>
+              <AppLayoutContent />
+            </AppearanceProvider>
+          </TripProvider>
         </BusTypeProvider>
       </AvatarProvider>
     </ThemeProvider>
@@ -38,7 +41,7 @@ function AppLayoutContent() {
     const currentRoute = segments[1];
     const roleRoute = user.role === 'driver' ? 'driver' : 'student';
 
-    const sharedRoutes = ['profile', 'customization'];
+    const sharedRoutes = ['profile', 'customization', 'trip-summary'];
     const isShared = currentRoute && sharedRoutes.includes(currentRoute);
     const isCorrectRole = currentRoute === roleRoute;
 
@@ -100,6 +103,13 @@ function AppLayoutContent() {
           },
           headerTintColor: isDark ? colors.text : theme.onPrimary,
           headerTitleStyle: { fontWeight: 'bold' },
+        }}
+      />
+      <Stack.Screen
+        name="trip-summary"
+        options={{
+          headerShown: false,
+          presentation: 'modal',
         }}
       />
     </Stack>
