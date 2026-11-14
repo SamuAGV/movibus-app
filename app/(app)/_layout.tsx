@@ -29,7 +29,8 @@ function AppLayoutContent() {
   const { user, loading } = useAuth();
   const { theme } = useTheme();
   const { colors, isDark } = useAppearance();
-  const segments = useSegments();
+  // Cast a string[] para evitar el error de tupla en Expo Router 6
+  const segments = useSegments() as string[];
 
   useEffect(() => {
     if (loading) return;
