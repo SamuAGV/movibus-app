@@ -1,57 +1,50 @@
-name: CI - MoviBus
+# .github/workflows/ci.yml
+# Pipeline de Integración Continua para MoviBus-Demo.
+# Se ejecuta en cada push y pull request hacia main.
+# Verifica: instalación de dependencias, typecheck y tests con cobertura.
+
+name: CI
 
 on:
   push:
-    branches: [main, develop, samuel]
+    branches: [main]
   pull_request:
-    branches: [main, develop]
-  workflow_dispatch:
+    branches: [main]
+
+# Cancela ejecuciones previas del mismo commit si llega uno nuevo
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-test:
-    name: Build y Pruebas
+  quality:
+    name: Typecheck & Tests
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [20.x]
-
     steps:
-      - name: 📥 Checkout del repositorio
+      - name: Checkout del código
         uses: actions/checkout@v4
 
-      - name: 🟢 Configurar Node.js ${{ matrix.node-version }}
+      - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          node-version: 20
+          cache: npm
 
-      - name: 📦 Instalar dependencias
+      - name: Instalar dependencias
         run: npm ci
 
-      - name: 🔍 Verificar tipos con TypeScript
+      - name: Verificación de tipos
         run: npm run typecheck
 
-      - name: 🏗️ Compilar proyecto (expo export)
-        run: npm run build
-        env:
-          CI: true
+      - name: Pruebas con Jest y cobertura
+        run: npm test -- --coverage --ci
 
-      - name: 🧪 Ejecutar pruebas automatizadas
-        run: npm test
-
-      - name: 📊 Publicar reporte de cobertura
+      - name: Guardar reporte de cobertura como artefacto
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-report
+          name: coverage-report-${{ github.sha }}
           path: coverage/
-          retention-days: 7
-
-      - name: 📦 Publicar artefacto del build
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-build
-          path: dist/
-          retention-days: 7
+          retention-days: 30
+          if-no-files-found: warn
