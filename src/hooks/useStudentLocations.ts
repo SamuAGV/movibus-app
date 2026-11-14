@@ -7,7 +7,7 @@ export const useStudentLocations = () => {
   const [buses, setBuses] = useState<Record<string, BusLocation>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchLocations = async () => {
     try {
