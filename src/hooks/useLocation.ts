@@ -9,7 +9,7 @@ export const useDriverLocation = (driverId: string, busId: string) => {
   const [location, setLocation] = useState<BusLocation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isSharingRef = useRef(false);
 
   // Hook del viaje: cada punto también se acumula aquí
