@@ -1,15 +1,15 @@
 // app/(app)/__tests__/customization.test.tsx
-import { render, screen } from '@testing-library/react-native';
+import { render } from '@testing-library/react-native';
 import React from 'react';
 
 // ── Mocks ────────────────────────────────────────────────────
 
 const mockUseAuth = jest.fn();
-jest.mock('../../src/contexts/AuthContext', () => ({
+jest.mock('../../../src/contexts/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
 }));
 
-jest.mock('../../src/contexts/AppearanceContext', () => ({
+jest.mock('../../../src/contexts/AppearanceContext', () => ({
   useAppearance: () => ({
     colors: {
       background: '#FFFFFF',
@@ -26,24 +26,23 @@ jest.mock('../../src/contexts/AppearanceContext', () => ({
   }),
 }));
 
-// Stubs para los pickers reales (no queremos testear sus internals aquí)
-jest.mock('../../src/components/ProfilePhotoPicker', () => {
+jest.mock('../../../src/components/ProfilePhotoPicker', () => {
   const { Text } = require('react-native');
   return () => <Text testID="picker-photo">ProfilePhotoPicker</Text>;
 });
-jest.mock('../../src/components/AvatarPicker', () => {
+jest.mock('../../../src/components/AvatarPicker', () => {
   const { Text } = require('react-native');
   return () => <Text testID="picker-avatar">AvatarPicker</Text>;
 });
-jest.mock('../../src/components/ThemePicker', () => {
+jest.mock('../../../src/components/ThemePicker', () => {
   const { Text } = require('react-native');
   return () => <Text testID="picker-theme">ThemePicker</Text>;
 });
-jest.mock('../../src/components/BusTypePicker', () => {
+jest.mock('../../../src/components/BusTypePicker', () => {
   const { Text } = require('react-native');
   return () => <Text testID="picker-bus-type">BusTypePicker</Text>;
 });
-jest.mock('../../src/components/AppearancePicker', () => {
+jest.mock('../../../src/components/AppearancePicker', () => {
   const { Text } = require('react-native');
   return () => <Text testID="picker-appearance">AppearancePicker</Text>;
 });
@@ -53,32 +52,32 @@ import CustomizationScreen from '../customization';
 // ── Tests ────────────────────────────────────────────────────
 
 describe('CustomizationScreen — HU-40', () => {
-  test('conductor ve ThemePicker + AppearancePicker, no foto/avatar/bus-type', () => {
+  test('conductor ve ThemePicker + AppearancePicker, no foto/avatar/bus-type', async () => {
     mockUseAuth.mockReturnValue({
       user: { uid: 'd1', email: 'driver@test.com', name: 'Driver', role: 'driver' },
     });
 
-    render(<CustomizationScreen />);
+    const { getByTestId, queryByTestId } = await render(<CustomizationScreen />);
 
-    expect(screen.getByTestId('picker-theme')).toBeTruthy();
-    expect(screen.getByTestId('picker-appearance')).toBeTruthy();
+    expect(getByTestId('picker-theme')).toBeTruthy();
+    expect(getByTestId('picker-appearance')).toBeTruthy();
 
-    expect(screen.queryByTestId('picker-photo')).toBeNull();
-    expect(screen.queryByTestId('picker-avatar')).toBeNull();
-    expect(screen.queryByTestId('picker-bus-type')).toBeNull();
+    expect(queryByTestId('picker-photo')).toBeNull();
+    expect(queryByTestId('picker-avatar')).toBeNull();
+    expect(queryByTestId('picker-bus-type')).toBeNull();
   });
 
-  test('estudiante ve las 5 secciones completas', () => {
+  test('estudiante ve las 5 secciones completas', async () => {
     mockUseAuth.mockReturnValue({
       user: { uid: 's1', email: 'student@test.com', name: 'Student', role: 'student' },
     });
 
-    render(<CustomizationScreen />);
+    const { getByTestId } = await render(<CustomizationScreen />);
 
-    expect(screen.getByTestId('picker-photo')).toBeTruthy();
-    expect(screen.getByTestId('picker-avatar')).toBeTruthy();
-    expect(screen.getByTestId('picker-theme')).toBeTruthy();
-    expect(screen.getByTestId('picker-bus-type')).toBeTruthy();
-    expect(screen.getByTestId('picker-appearance')).toBeTruthy();
+    expect(getByTestId('picker-photo')).toBeTruthy();
+    expect(getByTestId('picker-avatar')).toBeTruthy();
+    expect(getByTestId('picker-theme')).toBeTruthy();
+    expect(getByTestId('picker-bus-type')).toBeTruthy();
+    expect(getByTestId('picker-appearance')).toBeTruthy();
   });
 });

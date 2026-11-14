@@ -102,7 +102,7 @@ export default function OccupancyCard({
         <View style={styles.divider} />
 
         <View style={styles.statItem}>
-          <Ionicons name="seat-outline" size={22} color={colors.brandText} />
+          <Ionicons name="people-outline" size={22} color={colors.brandText} />
           <Text style={styles.statValue} testID="occupancy-available">
             {available}
           </Text>
