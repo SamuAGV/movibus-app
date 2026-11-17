@@ -33,7 +33,7 @@ export default function LoginScreen() {
     setError('');
     try {
       await login(email, password, role);
-      router.replace('/(app)');
+      router.replace('/');
     } catch (e: any) {
       setError('Error al iniciar sesión');
     }
