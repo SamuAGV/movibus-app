@@ -9,6 +9,10 @@ export interface BusLocation {
     speed?: number;
     timestamp: number;
     route?: string;
+    /** Optional occupancy data supplied by the location service. */
+    availableSeats?: number;
+    passengers?: number;
+    maxPassengers?: number;
   }
 
 export type IncidentType = 'delay' | 'mechanical' | 'blocked' | 'other';
