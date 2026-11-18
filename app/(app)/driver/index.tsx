@@ -18,8 +18,10 @@ import { useAuth } from '../../../src/contexts/AuthContext';
 import { useTheme } from '../../../src/contexts/ThemeContext';
 import { useTrip } from '../../../src/contexts/TripContext';
 import { useDriverLocation } from '../../../src/hooks/useLocation';
+import { useIncidents } from '../../../src/hooks/useIncidents';
 import { AppearanceColors } from '../../../src/theme/appearance';
 import { hexToRgba } from '../../../src/theme/themes';
+import { IncidentType } from '../../../src/types';
 
 export default function DriverScreen() {
   const { user } = useAuth();
@@ -38,6 +40,8 @@ export default function DriverScreen() {
 
   const { location, error, isSharing, startSharing, stopSharing } =
     useDriverLocation(user?.uid || 'demo-driver', 'BUS-001');
+
+  const { reports: incidents, loading: incidentsLoading } = useIncidents('BUS-001');
 
   useEffect(() => {
     if (location) {
@@ -280,11 +284,57 @@ export default function DriverScreen() {
           </View>
         )}
 
+        {/* Reportes recientes */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Reportes de incidencias</Text>
+          {incidentsLoading ? (
+            <>
+              <View style={[styles.skeletonLine, { width: '70%', marginBottom: 8 }]} />
+              <View style={[styles.skeletonLine, { width: '50%' }]} />
+            </>
+          ) : incidents.length === 0 ? (
+            <Text style={styles.noIncidentsText}>Sin incidencias activas</Text>
+          ) : (
+            incidents.map((r) => (
+              <View key={r.id} style={styles.incidentRow}>
+                <Ionicons
+                  name={INCIDENT_ICONS[r.type]}
+                  size={18}
+                  color="#e65100"
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.incidentLabel}>{INCIDENT_LABELS[r.type]}</Text>
+                  {r.comment ? (
+                    <Text style={styles.incidentComment}>{r.comment}</Text>
+                  ) : null}
+                </View>
+                <Text style={styles.incidentTime}>
+                  {new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
+            ))
+          )}
+        </View>
+
         <View style={{ height: 30 }} />
       </ScrollView>
     </View>
   );
 }
+
+const INCIDENT_LABELS: Record<IncidentType, string> = {
+  delay: 'Retraso',
+  mechanical: 'Falla mecánica',
+  blocked: 'Ruta bloqueada',
+  other: 'Otro',
+};
+
+const INCIDENT_ICONS: Record<IncidentType, string> = {
+  delay: 'time-outline',
+  mechanical: 'construct-outline',
+  blocked: 'warning-outline',
+  other: 'ellipsis-horizontal-circle-outline',
+};
 
 const createStyles = (c: AppearanceColors) =>
   StyleSheet.create({
@@ -428,4 +478,13 @@ const createStyles = (c: AppearanceColors) =>
     statValue: { fontSize: 18, fontWeight: 'bold', color: c.text },
     statLabel: { fontSize: 11, color: c.textSecondary, marginTop: 4 },
     divider: { width: 1, height: 30, backgroundColor: c.border },
+    skeletonLine: { height: 12, borderRadius: 6, backgroundColor: c.border },
+    noIncidentsText: { fontSize: 13, color: c.textSecondary, textAlign: 'center', paddingVertical: 8 },
+    incidentRow: {
+      flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+      paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.border,
+    },
+    incidentLabel: { fontSize: 13, fontWeight: '600', color: c.text },
+    incidentComment: { fontSize: 12, color: c.textSecondary, marginTop: 2 },
+    incidentTime: { fontSize: 11, color: c.textSecondary },
   });

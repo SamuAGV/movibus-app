@@ -17,7 +17,9 @@ import { useAuth } from '../../../src/contexts/AuthContext';
 import { useAvatar } from '../../../src/contexts/AvatarContext';
 import { useTheme } from '../../../src/contexts/ThemeContext';
 import { useDayNightMap } from '../../../src/hooks/useDayNightMap';
+import { useIncidents } from '../../../src/hooks/useIncidents';
 import { useStudentLocations } from '../../../src/hooks/useStudentLocations';
+import ReportModal from '../../../src/components/ReportModal';
 import { AppearanceColors } from '../../../src/theme/appearance';
 import { hexToRgba } from '../../../src/theme/themes';
 
@@ -31,6 +33,9 @@ export default function StudentScreen() {
   const mapRef = useRef<MapView | null>(null);
   const { buses: busesMap, loading, error } = useStudentLocations();
   const [selectedBusId, setSelectedBusId] = useState<string | null>(null);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+
+  const { reports: activeIncidents } = useIncidents(selectedBusId);
 
   const { isNight, mapStyle, userInterfaceStyle } = useDayNightMap();
 
@@ -86,7 +91,6 @@ export default function StudentScreen() {
     );
   };
 
-  // Sub-componente: círculo del header con la foto propia o la inicial
   const HeaderAvatar = () => (
     <View
       style={[
@@ -317,14 +321,33 @@ export default function StudentScreen() {
                   </Text>
                 </View>
                 <View style={styles.speedBadge}>
-                  <Text
-                    style={[styles.speedBadgeValue, { color: theme.primary }]}
-                  >
+                  <Text style={[styles.speedBadgeValue, { color: theme.primary }]}>
                     {Math.round((selectedBus.speed || 0) * 3.6)}
                   </Text>
                   <Text style={styles.speedBadgeLabel}>km/h</Text>
                 </View>
               </View>
+
+              {activeIncidents.length > 0 && (
+                <View style={styles.incidentBanner}>
+                  <Ionicons name="warning" size={16} color="#e65100" />
+                  <Text style={styles.incidentBannerText}>
+                    {activeIncidents.length === 1
+                      ? '1 incidencia activa reportada'
+                      : `${activeIncidents.length} incidencias activas reportadas`}
+                  </Text>
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={[styles.reportBtn, { borderColor: colors.brandText }]}
+                onPress={() => setReportModalVisible(true)}
+              >
+                <Ionicons name="flag-outline" size={16} color={colors.brandText} />
+                <Text style={[styles.reportBtnText, { color: colors.brandText }]}>
+                  Reportar incidencia
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -387,6 +410,14 @@ export default function StudentScreen() {
           </TouchableOpacity>
         </ScrollView>
       </View>
+
+      <ReportModal
+        visible={reportModalVisible}
+        busId={selectedBusId ?? ''}
+        tripId={selectedBus?.driverId ?? 'trip-unknown'}
+        uid={user?.uid ?? ''}
+        onClose={() => setReportModalVisible(false)}
+      />
     </View>
   );
 }
@@ -421,17 +452,8 @@ const createStyles = (c: AppearanceColors) =>
       gap: 12,
       backgroundColor: c.background,
     },
-    emptyTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: c.text,
-      marginTop: 16,
-    },
-    emptySubtitle: {
-      fontSize: 14,
-      color: c.textSecondary,
-      textAlign: 'center',
-    },
+    emptyTitle: { fontSize: 20, fontWeight: '700', color: c.text, marginTop: 16 },
+    emptySubtitle: { fontSize: 14, color: c.textSecondary, textAlign: 'center' },
     header: {
       position: 'absolute',
       top: 50,
@@ -457,145 +479,77 @@ const createStyles = (c: AppearanceColors) =>
       alignSelf: 'flex-start',
       gap: 5,
     },
-    headerDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: '#34C759',
-    },
+    headerDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#34C759' },
     headerBadgeText: { fontSize: 11, fontWeight: '600' },
     modeIndicator: { fontSize: 10, marginTop: 3, fontStyle: 'italic' },
-    profileBtn: {
-      padding: 6,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
+    profileBtn: { padding: 6, justifyContent: 'center', alignItems: 'center' },
     profileInitialWrap: {
-      width: 42,
-      height: 42,
-      borderRadius: 21,
-      justifyContent: 'center',
-      alignItems: 'center',
+      width: 42, height: 42, borderRadius: 21,
+      justifyContent: 'center', alignItems: 'center',
     },
     profileInitial: { fontSize: 16, fontWeight: 'bold' },
-    mapControls: {
-      position: 'absolute',
-      right: 16,
-      bottom: 400,
-      zIndex: 15,
-    },
+    mapControls: { position: 'absolute', right: 16, bottom: 400, zIndex: 15 },
     mapBtn: {
-      width: 46,
-      height: 46,
-      borderRadius: 23,
-      backgroundColor: c.surface,
-      justifyContent: 'center',
-      alignItems: 'center',
-      elevation: 6,
-      borderWidth: 1,
-      borderColor: c.border,
+      width: 46, height: 46, borderRadius: 23,
+      backgroundColor: c.surface, justifyContent: 'center', alignItems: 'center',
+      elevation: 6, borderWidth: 1, borderColor: c.border,
     },
     bottomSheet: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      maxHeight: 420,
-      backgroundColor: c.surface,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      paddingHorizontal: 16,
-      elevation: 12,
-      zIndex: 10,
-      borderTopWidth: 1,
-      borderColor: c.border,
+      position: 'absolute', bottom: 0, left: 0, right: 0, maxHeight: 420,
+      backgroundColor: c.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+      paddingHorizontal: 16, elevation: 12, zIndex: 10,
+      borderTopWidth: 1, borderColor: c.border,
     },
     handleBar: {
-      width: 40,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: c.border,
-      alignSelf: 'center',
-      marginVertical: 12,
+      width: 40, height: 4, borderRadius: 2, backgroundColor: c.border,
+      alignSelf: 'center', marginVertical: 12,
     },
     selectedCard: {
-      backgroundColor: c.card,
-      borderRadius: 14,
-      padding: 14,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: c.border,
+      backgroundColor: c.card, borderRadius: 14, padding: 14,
+      marginBottom: 12, borderWidth: 1, borderColor: c.border,
     },
     selectedHeader: { flexDirection: 'row', alignItems: 'center' },
     busIcon: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: 12,
+      width: 44, height: 44, borderRadius: 22,
+      justifyContent: 'center', alignItems: 'center', marginRight: 12,
     },
     busIdText: { fontSize: 15, fontWeight: '600', color: c.text },
     busDriverText: { fontSize: 12, color: c.textSecondary, marginTop: 2 },
     speedBadge: { alignItems: 'center' },
     speedBadgeValue: { fontSize: 20, fontWeight: 'bold' },
     speedBadgeLabel: { fontSize: 10, color: c.textSecondary },
+    incidentBanner: {
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      backgroundColor: c.tintOrange, borderRadius: 8, padding: 8, marginTop: 10,
+    },
+    incidentBannerText: { fontSize: 12, fontWeight: '600', color: '#e65100', flex: 1 },
+    reportBtn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      gap: 6, marginTop: 10, paddingVertical: 10, borderRadius: 10, borderWidth: 1.5,
+    },
+    reportBtnText: { fontSize: 13, fontWeight: '700' },
     listCard: {
-      backgroundColor: c.card,
-      borderRadius: 14,
-      padding: 14,
-      borderWidth: 1,
-      borderColor: c.border,
-      marginBottom: 12,
+      backgroundColor: c.card, borderRadius: 14, padding: 14,
+      borderWidth: 1, borderColor: c.border, marginBottom: 12,
     },
-    listTitle: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: c.text,
-      marginBottom: 12,
-    },
+    listTitle: { fontSize: 14, fontWeight: '700', color: c.text, marginBottom: 12 },
     busItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 10,
-      borderRadius: 10,
-      marginBottom: 6,
-      backgroundColor: c.surface,
+      flexDirection: 'row', alignItems: 'center', padding: 10,
+      borderRadius: 10, marginBottom: 6, backgroundColor: c.surface,
     },
-    busItemSelected: {
-      backgroundColor: c.tintGreen,
-      borderWidth: 1,
-      borderColor: c.brandText,
-    },
+    busItemSelected: { backgroundColor: c.tintGreen, borderWidth: 1, borderColor: c.brandText },
     busItemIcon: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      backgroundColor: c.tintGreen,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: 10,
+      width: 34, height: 34, borderRadius: 17, backgroundColor: c.tintGreen,
+      justifyContent: 'center', alignItems: 'center', marginRight: 10,
     },
     busItemId: { fontSize: 13, fontWeight: '600', color: c.text },
     busItemDriver: { fontSize: 11, color: c.textSecondary, marginTop: 2 },
-    statusBadge: {
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: 10,
-    },
+    statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
     statusActive: { backgroundColor: c.tintGreen },
-    statusBadgeText: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: c.textSecondary,
-    },
+    statusBadgeText: { fontSize: 11, fontWeight: '600', color: c.textSecondary },
     takeBusBtn: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      alignItems: 'center',
-      gap: 8,
-      paddingVertical: 14,
-      borderRadius: 12,
+      flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+      gap: 8, paddingVertical: 14, borderRadius: 12,
     },
     takeBusText: { fontSize: 15, fontWeight: '600' },
   });
